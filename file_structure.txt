@@ -1,0 +1,19 @@
+/student-org-db
+├── src
+│   ├── __init__.py
+│   └── main.py
+├── data
+│   ├── models
+│   │   ├── student.py
+│   │   ├── organization.py
+│   │   ├── fee.py
+│   │   └── committee.py
+│   ├── queries.py
+│   └── queries.sql
+├── .env
+├── .gitignore
+├── er-diagram.png
+├── README.md
+├── requirements.txt
+└── file_structure.txt
+

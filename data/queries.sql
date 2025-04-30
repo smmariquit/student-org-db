@@ -63,10 +63,76 @@ CREATE TABLE Joins (
     MemberRole varchar(255) NOT NULL,
     MemberStatus varchar(255) NOT NULL
     CONSTRAINT PK_Joins PRIMARY KEY (StudentNumber, OrganizationId, AcademicYear, Semester)
-    CONSTRAINT UQ_SN UNIQUE (StudentNumber) -- wait what if hindi nag eexist yung S/N sa Member table? wala bang constraint for that?
+    CONSTRAINT UQ_SN UNIQUE (StudentNumber) -- wait what if hindi nag eexist yung S/N sa Member table? wala bang constraint for that? why wouldnt it exist there lahat naman ng member may std no
 );
 
 CREATE TABLE MemberBatch (
     StudentNumber varchar(255) NOT NULL,
     OrganizationId varchar(255) NOT NULL,
 );
+
+
+-- 1. View all members of the organization by role, status, gender, degree program, batch (year of membership), and committee. (Note: we assume one committee membership only per organization per semester) 
+
+CREATE OR REPLACE VIEW membersvu(student_number, last_name, first_name, role, status, gender, degree_program, batch, committee)
+    AS SELECT m.StudentNumber, m.LastName, m.FirstName, 
+    sr.Role, j.Status, m.Gender, m.DegreeProgram, 
+    mb.Batch, sr.CommitteeName
+    FROM Member m
+    JOIN MemberBatch mb on m.StudentNumber = mb.StudentNumber 
+    JOIN StudentRole sr on mb.StudentNumber = sr.StudentNumber
+    JOIN Joins j ON m.StudentNumber = j.StudentNumber
+        AND mb.OrganizationId = j.OrganizationId
+    WHERE sr.OrganizationId = "givenOrganization"  
+
+
+-- 2. View members for a given organization with unpaid membership fees or dues for a given semester and academic year. 
+CREATE OR REPLACE VIEW unpaid_fees_orgvu(student_number, last_name, first_name, fee_name, amount, due_date) 
+    AS SELECT m.StudentNumber, m.LastName, m.FirstName, f.FeeName, f.Amount, f.DueDate
+    FROM Member m 
+    JOIN Fee f ON m.StudentNumber = f.StudentNumber 
+    WHERE f.Status = 'unpaid' 
+    AND f.OrganizationId = 'givenOrganization'
+    AND f.AcademicYear = 'givenAcademicYear'
+    AND f.Semester = 'givenSemester';
+
+
+
+-- 3. View a member's unpaid membership fees or dues for all their organizations (Member's POV). 
+CREATE OR REPLACE VIEW unpaid_fees_membervu(organization_id, fee_name, amount, due_date, academic_year, semester)
+    AS SELECT f.OrganizationId, f.FeeName, f.Amount, f.DueDate, f.AcademicYear, f.Semester
+    FROM Fee f
+    WHERE f.Status = 'unpaid';
+
+
+-- 4. View all executive committee members of a given organization for a given academic year. 
+
+CREATE OR REPLACE VIEW executive_comittee_membersvu(student_number, last_name, first_name, committee_name, semester)
+    AS SELECT m.StudentNumber, m.LastName, m.FirstName, sr.CommitteeName, c.Semester
+    FROM Member m
+    JOIN StudentRole sr ON m.StudentNumber = sr.StudentNumber
+    JOIN Committee c ON sr.CommitteeName = c.CommitteeName
+        AND sr.OrganizationId = c.OrganizationId
+    WHERE sr.OrganizationId = 'givenOrganization'
+    AND c.AcademicYear = 'givenAcademicYear'
+    AND c.CommitteeName = 'Executive';
+
+
+-- 5. View all Presidents (or any other role) of a given organization for every academic year in reverse chronological order (current to past).
+
+CREATE OR REPLACE VIEW organization_rolevu(student_number, last_name, first_name, academic_year)
+    AS SELECT m.StudentNumber, m.LastName, m.FirstName, j.AcademicYear
+    FROM Member m
+    JOIN Joins j ON m.StudentNumber = j.StudentNumber
+    WHERE j.Role = 'givenRole'
+        AND j.OrganizationId = 'givenOrgId'
+-- ordering should be in view query (https://stackoverflow.com/questions/15187676/create-a-view-with-order-by-clause)
+
+
+-- 6. View all late payments made by all members of a given organization for a given semester and academic year. 
+-- 7. View the percentage of active vs inactive members of a given organization for the last n semesters. (Note: n is a positive integer) 
+-- 8. View all alumni members of a given organization as of a given date. 
+-- 9. View the total amount of unpaid and paid fees or dues of a given organization as of a given 
+-- date. 
+-- 10. View the member/s with the highest debt of a given organization for a given semester. 
+

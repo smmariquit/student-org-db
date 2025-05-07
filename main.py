@@ -1,40 +1,110 @@
-import mariadb
-import os
+# CMSC 127 ST26L - MySJL
+# Final Project - a Python CLI app that simulates a Student Organization Database.
+# This is the main file that runs the program.
+
+# This app was created by the following BS Computer Science students at the University of the Philippines Los Baños:
+# MARIQUIT, Simonee Ezekiel M.
+# CHAN, Liesl Erica
+# GERMINAL, Jan Andrew
+
+# TECH STACK: MariaDB, Python
+# REFERENCES:
+# [1] https://www.geeksforgeeks.org/dunder-magic-methods-python/ - for __init__ and __str__
+# [2] https://stackoverflow.com/questions/2491819/how-to-return-a-value-from-init-in-python
+# [3] https://docs.pydantic.dev/latest/#pydantic-examples - Pydantic is actually a well-known Python library and in the examples folder, they show how to make a class that models entities. Similar libraries include SQLAlchemy.  
+# [4] https://www.geeksforgeeks.org/how-to-use-dotenv-module-in-python/ - for loading environment variables from a .env file.  
+# [5] https://mariadb.com/resources/blog/how-to-connect-python-programs-to-mariadb/ - for the MariaDB connector for Python.
+# [6] https://asciiflow.com/#/ - We used this really cool ASCII art generator 
+
+import mariadb # Import the official MariaDB connector for Python
+import os # Import the OS module to read environment variables, which is necessary for the security of the database connection.
 from dotenv import load_dotenv
-from data import queries
-from data.models import student, organization, fee, committee
-from src import fees, organizations, students
+from src import students, organizations, membership, fees
+from data import models, queries
 
-# does not yet use mysql
+# Load environment variables
+load_dotenv()
 
+# Database connection parameters from the .env file
+DB_USER = os.getenv('DB_USER')
+DB_PASSWORD = os.getenv('DB_PASSWORD')
+DB_HOST = os.getenv('DB_HOST')
+DB_NAME = os.getenv('DB_NAME')
+
+# Connect to MariaDB
 try:
     conn = mariadb.connect(
-        user=organizationer,
-        password=uplbsqlsociety,
-        host=localhost,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        host=DB_HOST,
         port=3306,
-        database=organization
+        database=DB_NAME
     )
     
-    print("Successfully connected to MariaDB!")
+    print("✅ Successfully connected to MariaDB!")
+
+    # The cursor is basically the tool that accesses the ros in the MySQL table. Basically a way to show na "the database is currently here"
+    cursor = conn.cursor()
    
 except mariadb.Error as e:
-    print(f"Error connecting to MariaDB: {e}")
-   
-cursor = conn.cursor()
+    print(f"❌ Error connecting to MariaDB: {e}")
+    exit(1)
 
-# Main menu
-while True:
-    print("---------------[ Student Org Database ]---------------")
-    print("[1] Manage Students")
-    print("[2] Manage Membership")
-    print("[3] Manage Organizations")
-    print("[4] Manage Fees")
-    print("[4] Exit ")
-    
-    choice = int(input())
+# Cute ASCII art header and menu xD
+def print_header():
+    print("""╔════════════════════════════════════════════════════════════╗
+║                🎓 Student Organization DB 🎓               ║
+╚════════════════════════════════════════════════════════════╝""")
 
-# Proposed CLI Fllow
+def print_menu():
+    print("""📋 Main Menu:
+╔════════════════════════════════════════════════════════════╗
+║ [1] 👥 Manage Students                                     ║
+║ [2] 🏢 Manage Organizations                                ║
+║ [3] 🤝 Manage Memberships                                  ║
+║ [4] 💰 Manage Fees                                         ║
+║ [0] 🚪 Exit                                                ║
+╚════════════════════════════════════════════════════════════╝""")
+
+# This main function is the entry point of the program. See the huge comment below for the CLI flow that we devised.
+def main():
+    while True:
+        print_header()
+        print_menu()
+        
+        try:
+            choice = input("👉 Enter your choice: ")
+            
+            if choice == "0":
+                print("\n👋 Thank you for using the Student Organization Database!")
+                break
+                
+            if choice == "1":
+                students.main()
+            elif choice == "2":
+                organizations.main()
+            elif choice == "3":
+                membership.main()
+            elif choice == "4":
+                fees.main()
+            else:
+                print("❌ Invalid choice! Please try again.")
+                
+        except ValueError:
+            print("❌ Please enter a valid number!")
+        except Exception as e:
+            print(f"❌ An error occurred: {e}")
+
+if __name__ == "__main__":
+    try:
+        main()
+    finally:
+        # Close database connection
+        cursor.close()
+        conn.close()
+        print("\n🔌 Database connection closed.")
+
+# Proposed CLI Flow
 # Some notes: Deleting some things, like for example Organization, may affect the other entities.
 
 # MAIN MENU
@@ -78,12 +148,12 @@ while True:
 #         → Input: Org Name, Type, Description
 #     2. Update Organization
 #         → Input: Select Organization by ID
-#     3. Delete Organization  # WARNING: This will also affect all associated memberships and fee records!
+#     3. Delete Organization  # WARNING: This will also affect all associated memberships and fee records! D:
 #         → Input: Confirm deletion (Y/N)
 #     4. View Organizations
 #           1. View All Organizations
 #           2. View by Type
-#               → Input: Org Type (e.g. Academic, Varsitarian, etc.)
+#               → Input: Org Type
 #           0. Back
 #     0. Back
 
@@ -145,7 +215,7 @@ while True:
 #     5. View Fee Reports
 #         1. Members with Unpaid Dues for Given Semester (Report #2)
 #           → Input: Semester, Academic Year
-#         2. A Member’s Unpaid Dues Across All Orgs (Report #3)
+#         2. A Member's Unpaid Dues Across All Orgs (Report #3)
 #           → Input: Student ID
 #         3. Late Payments in Given Semester (Report #6)
 #           → Input: Semester, Academic Year

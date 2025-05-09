@@ -256,8 +256,28 @@ CREATE OR REPLACE VIEW alumnivu(student_number, first_name, last_name, organizat
     AS SELECT m.`Student Number`, m.`First Name`, m.`Last Name`, j,`Organization ID`, j.`Status`
     FROM member m
     JOIN joins j ON m.`Student Number` = j.`Student Number`
-    WHERE j.`Organization ID` = 11111111;
-        AND j.`Status` = "Alumni";  -- not sure if dito makikita if alumni
+    WHERE (j.`Student Number`, j.`Organization ID`, 
+        STR_TO_DATE(CONCAT(SUBSTRING_INDEX(j.`Academic Year`, '-', 1), 
+                            CASE j.`Semester` 
+                                WHEN '1st' THEN '-01-01' 
+                                WHEN '2nd' THEN '-08-01' 
+                                ELSE '-01-01' 
+                            END), '%Y-%m-%d')
+        ) IN (
+        SELECT 
+            j2.`Student Number`, 
+            j2.`Organization ID`,
+            MAX(STR_TO_DATE(CONCAT(SUBSTRING_INDEX(j2.`Academic Year`, '-', 1), 
+                                CASE j2.`Semester` 
+                                    WHEN '1st' THEN '-01-01' 
+                                    WHEN '2nd' THEN '-08-01' 
+                                    ELSE '-01-01' 
+                                END), '%Y-%m-%d'))
+        FROM joins j2
+        GROUP BY j2.`Student Number`, j2.`Organization ID`
+    )
+    AND j.`Member Status` = 'Alumni'
+    AND m.`Organization ID` = 11111111;
 
 
 
@@ -267,7 +287,7 @@ CREATE OR REPLACE VIEW org_feesvu(organization_name, organization_id, fee_name, 
     FROM organization m
     JOIN fee f ON m.`Organization ID` = f.`Organization ID`
     WHERE m.`Organization ID` = 11111111
-        AND 
+        AND f.`Due Date` <= '2025-05-01';
 
 
 -- 10. View the member/s with the highest debt of a given organization for a given semester. 

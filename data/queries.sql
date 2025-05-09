@@ -220,9 +220,76 @@ CREATE OR REPLACE VIEW organization_rolevu(student_number, last_name, first_name
 
 
 -- 6. View all late payments made by all members of a given organization for a given semester and academic year. 
+
+CREATE OR REPLACE VIEW late_paymentsvu (StudentNumber, LastName, FirstName, Semester, AcademicYear)
+    AS SELECT m.StudentNumber, m.LastName, m.FirstName, f.Semester f.AcademicYear
+    FROM Member m 
+    RIGHT JOIN Fee f ON m.StudentNumber = f.StudentNumber
+    JOIN Payment p ON m.StudentNumber = p.StudentNumber AND f.OrganizationId = p.OrganizationId
+    WHERE p.PaymentLate = TRUE
+    AND f.Semester = 'givenSemester'
+    AND f.AcademicYear = 'givenAcademicYear'
+
 -- 7. View the percentage of active vs inactive members of a given organization for the last n semesters. (Note: n is a positive integer) 
+
+CREATE OR REPLACE VIEW member_percentagevu( Active, Inactive)
+    AS SELECT 
+    CONCAT(ROUND((COUNT(CASE WHEN j.MemberStatus = 'Active' THEN 1 END) * 100.0 / COUNT(*)), 2), '%') AS active_percentage,
+    CONCAT(ROUND((COUNT(CASE WHEN j.MemberStatus = 'Inactive' THEN 1 END) * 100.0 / COUNT(*)), 2), '%') AS inactive_percentage
+    FROM member m
+    RIGHT JOIN joins j ON m.StudentNumber = j.StudentNumber
+    WHERE j.OrganizatonId = 'givenOrganization'
+
+
+-- for the last n semesters idk how to do this granted na we use academic years and semesters is only limited to 2 values for profiling
+
+
 -- 8. View all alumni members of a given organization as of a given date. 
+
+CREATE OR REPLACE VIEW alumnivu(LastName, FirstName, MiddleName)
+
+AS SELECT m.LastName, m.FirstName, COALESCE(m.MiddleName,"")
+FROM Member m
+RIGHT JOIN joins j on m.StudentId = j.StudentId
+WHERE j.role = 'Alumni'
+
+-- same issue here since the input would be a date idk how to do this granted na we use academic years and semesters is only limited to 2 values for profiling
+
+
+
 -- 9. View the total amount of unpaid and paid fees or dues of a given organization as of a given 
 -- date. 
+
+CREATE OR REPLACE VIEW total_paid_unpaidvu(Total_paid  , Total_Unpaid)
+AS SELECT
+    SUM(CASE WHEN f.Status = 'Paid' THEN f.amount END),
+    SUM(CASE WHEN f.Status = 'Unpaid' THEN f.amount END)
+FROM Fee f
+Where f.OrganizationId = 'givenOrganization'
+
+-- same issue here since the input would be a date idk how to do this granted na we use academic years and semesters is only limited to 2 values for profiling
+
+
+
 -- 10. View the member/s with the highest debt of a given organization for a given semester. 
 
+CREATE OR REPLACE VIEW highest_debt_view (LastName, FirstName, MiddleName, HighestDebt) 
+AS SELECT m.LastName, m.FirstName, COALESCE(m.MiddleName,''), debt.DebtAmount
+FROM (
+    SELECT j.StudentNumber, SUM(CASE WHEN f.Status = 'Unpaid' THEN f.Amount END) AS Debt_amount
+    FROM Joins j
+    RIGHT JOIN Fee f ON j.OrganizationId = f.OrganizationId
+    WHERE j.OrganizationId = 'givenOrganization'
+    GROUP BY j.StudentNumber
+) AS debt
+JOIN Member m ON debt.StudentNumber = m.StudentNumber
+WHERE debt.DebtAmount = (
+    SELECT MAX(Debt_amount) 
+    FROM (
+        SELECT SUM(CASE WHEN f.Status = 'Unpaid' THEN f.Amount END) AS DebtAmount
+        FROM Joins j
+        RIGHT JOIN Fee f ON j.OrganizationId = f.OrganizationId
+        WHERE j.OrganizationId = 'givenOrganization'
+        GROUP BY j.StudentNumber
+    ) AS maxDebt
+);

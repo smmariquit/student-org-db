@@ -236,89 +236,214 @@ CREATE OR REPLACE VIEW organization_rolevu(student_number, last_name, first_name
     ORDER BY STR_TO_DATE(CONCAT(SUBSTRING_INDEX(j.`Academic Year`, '-', 1), '-01-01'), '%Y-%m-%d') DESC;
 
 
--- -- 6. View all late payments made by all members of a given organization for a given semester and academic year. 
--- -- 7. View the percentage of active vs inactive members of a given organization for the last n semesters. (Note: n is a positive integer) 
--- -- 8. View all alumni members of a given organization as of a given date. 
--- -- 9. View the total amount of unpaid and paid fees or dues of a given organization as of a given 
--- -- date. 
--- -- 10. View the member/s with the highest debt of a given organization for a given semester. 
+-- 6. View all late payments made by all members of a given organization for a given semester and academic year. 
+CREATE OR REPLACE VIEW late_paymentsvu(fee_name, student_number, organization_id, due_date, payment_late?)
+    AS SELECT f.`Fee Name`, f.`Student Number`, f.`Organization ID`, f.`Due Date`, f.`Payment Late?`
+    FROM fee f
+    JOIN joins j ON f.`Student Number` = j.`Student Number`
+    WHERE f.`Organization ID` = 11111111;
+        AND f.`Payment Late?` = TRUE;
+        AND j.`Academic Year` = "2024-2025";
+        AND j.`Semester` = "1st";
 
--- update student number
-UPDATE member 
-    SET `Student Number` = 20231111
-    WHERE `Student Number` = 20230001;
 
-UPDATE joins 
-    SET `Student Number` = 20231111
-    WHERE `Student Number` = 20230001
-        AND `Organization ID` = 11111111;
+-- 7. View the percentage of active vs inactive members of a given organization for the last n semesters. (Note: n is a positive integer)
+ 
 
-UPDATE member_batch 
-    SET `Student Number` = 20231111
-    WHERE `Student Number` = 20230001
-        AND `Organization ID` = 11111111;
 
+-- 8. View all alumni members of a given organization as of a given date.
+CREATE OR REPLACE VIEW alumnivu(student_number, first_name, last_name, organization_id, status) 
+    AS SELECT m.`Student Number`, m.`First Name`, m.`Last Name`, j,`Organization ID`, j.`Status`
+    FROM member m
+    JOIN joins j ON m.`Student Number` = j.`Student Number`
+    WHERE j.`Organization ID` = 11111111;
+        AND j.`Status` = "Alumni";  -- not sure if dito makikita if alumni
+
+
+
+-- 9. View the total amount of unpaid and paid fees or dues of a given organization as of a given date. 
+CREATE OR REPLACE VIEW org_feesvu(organization_name, organization_id, fee_name, amount, due_date, academic_year, semester)
+    AS SELECT o.`Name`, o.`Organization ID`, f.`Fee Name`, f.`Amount`, f.`Due Date`, f.`Academic Year`, f.`Semester`
+    FROM organization m
+    JOIN fee f ON m.`Organization ID` = f.`Organization ID`
+    WHERE m.`Organization ID` = 11111111
+        AND 
+
+
+-- 10. View the member/s with the highest debt of a given organization for a given semester. 
+CREATE OR REPLACE VIEW high_debtsvu(fee_name, student_number, organization_id, due_date, amount, status)
+    AS SELECT f.`Fee Name`, f.`Student Number`, f.`Organization ID`, f.`Due Date`, f.`Amount`, f.`Status`
+    FROM fee f
+    JOIN joins j ON f.`Student Number` = j.`Student Number`
+    WHERE f.`Organization ID` = 11111111
+        AND f.`Status` = "Unpaid"
+        AND j.`Academic Year` = "2024-2025"
+        AND j.`Semester` = "1st"
+    ORDER BY f.`Amount` DESC;
+
+
+-- update student role 
 UPDATE student_role 
-    SET `Student Number` = 20231111
-    WHERE `Student Number` = 20230001
-        AND `Organization ID` = 11111111;
-
-UPDATE fee
-    SET `Student Number` = 20231111
-    WHERE `Student Number` = 20230001
-        AND `Organization ID` = 11111111;
-
-UPDATE payment 
-    SET `Student Number` = 20231111
-    WHERE `Student Number` = 20230001
-        AND `Organization ID` = 11111111;
-
-
--- update first name
-UPDATE member 
-    SET `First Name` = "Joe"
-    WHERE `Student Number` = 20230001
-
-
--- update last name
-UPDATE member 
-    SET `Last Name` = "Goldberg"
-    WHERE `Student Number` = 20230001
-
-
--- update gender
-UPDATE member 
-    SET `Gender` = "Nonbinary"
-    WHERE `Student Number` = 20230001
-
-
--- update degprog
-UPDATE member 
-    SET `Degree Program` = "BS Psychology"
-    WHERE `Student Number` = 20230001
-
-
--- update batch
-UPDATE member_batch 
-    SET `Batch` = "2015"
-    WHERE `Student Number` = 20230001
-        AND `Organization ID` = 11111111;
+    SET `Role` = "Snackeater"
+    WHERE `Organization ID` = 11111111
+        AND `Student Number` = "20230001"
+        AND `Committee Name` = "Snack Patrol";
 
 -- update organization name
 UPDATE organization 
     SET `Name` = "Society of Societies"
     WHERE `Organization ID` = 11111111;
 
+-- update committee role
+UPDATE committee_role  
+    SET `Role` = "Snackeater"
+    WHERE `Organization ID` = 11111111
+        AND `Committee Name` = "Snack Patrol";
 
--- update 
 
--- Update Fee
---     → Input: Select Fee Record
+-- update membership status
+UPDATE joins 
+    SET `Status` = "Inactive"
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111
+        AND `Academic Year` = "2024-2025"
+        AND `Semester` = "1st"
 
--- delete member
--- DELETE FROM member WHERE `Student Number` = 20230001;
--- DELETE FROM joins WHERE `Student Number` = 20230001;
--- DELETE FROM member_batch WHERE `Student Number` = 20230001;
--- DELETE FROM student_role WHERE `Student Number` = 20230001;
--- DELETE FROM fee WHERE `Student Number` = 20230001;
--- DELETE FROM payment WHERE `Student Number` = 20230001;
+-- update fee status
+UPDATE fee
+    SET `Status` = "Paid"
+    WHERE `Fee Name` = "Annual Dues"
+        AND `Student Number` = 20230001
+        AND `Organization ID` = 11111111
+        AND `Academic Year` = 2024-2025
+        AND `Semester`= 1st
+
+-- update fee due date
+UPDATE fee
+    SET `Due Date` = "2024-11-11"
+    WHERE `Fee Name` = "Annual Dues"
+        AND `Student Number` = 20230001
+        AND `Organization ID` = 11111111
+        AND `Academic Year` = 2024-2025
+        AND `Semester`= 1st
+
+
+-- update full payment date
+UPDATE payment
+    SET `Full Payment Date` = "2024-11-11"
+    WHERE `Fee Name` = "Annual Dues"
+        AND `Student Number` = 20230001
+        AND `Organization ID` = 11111111
+        AND `Full Payment Date` = '2024-10-02'
+
+-- update payment late?
+UPDATE payment
+    SET `Payment Late?` = FALSE
+    WHERE `Fee Name` = "Annual Dues"
+        AND `Student Number` = 20230001
+        AND `Organization ID` = 11111111
+        AND `Full Payment Date` = "2024-11-11"
+
+-- update due date
+UPDATE payment
+    SET `Due Date` = "2024-12-12"
+    WHERE `Fee Name` = "Annual Dues"
+        AND `Student Number` = 20230001
+        AND `Organization ID` = 11111111
+        AND `Full Payment Date` = "2024-11-11"
+
+-- delete member from database
+DELETE FROM member 
+    WHERE `Student Number` = 20230001;
+DELETE FROM joins 
+    WHERE `Student Number` = 20230001 
+        AND `Organization ID` = 11111111;
+DELETE FROM member_batch 
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+DELETE FROM student_role 
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+DELETE FROM fee 
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+DELETE FROM payment 
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+
+-- delete fee from database
+DELETE FROM fee
+    WHERE `Fee Name` = "Otter Field Trip"
+        AND `Organization ID` = 33333333;
+
+
+-- delete member payment from database
+DELETE FROM payment
+    WHERE `Fee Name` = "Poster Printing"
+        AND `Organization ID` = 44444444
+        AND `Student Number` = "20230004";
+
+
+
+-- NOT SURE IF INCLUDED IN MILESTONE
+
+-- update student number
+-- UPDATE member 
+--     SET `Student Number` = 20231111
+--     WHERE `Student Number` = 20230001;
+
+-- UPDATE joins 
+--     SET `Student Number` = 20231111
+--     WHERE `Student Number` = 20230001
+--         AND `Organization ID` = 11111111;
+
+-- UPDATE member_batch 
+--     SET `Student Number` = 20231111
+--     WHERE `Student Number` = 20230001
+--         AND `Organization ID` = 11111111;
+
+-- UPDATE student_role 
+--     SET `Student Number` = 20231111
+--     WHERE `Student Number` = 20230001
+--         AND `Organization ID` = 11111111;
+
+-- UPDATE fee
+--     SET `Student Number` = 20231111
+--     WHERE `Student Number` = 20230001
+--         AND `Organization ID` = 11111111;
+
+-- UPDATE payment 
+--     SET `Student Number` = 20231111
+--     WHERE `Student Number` = 20230001
+--         AND `Organization ID` = 11111111;
+
+
+-- -- update first name
+-- UPDATE member 
+--     SET `First Name` = "Joe"
+--     WHERE `Student Number` = 20230001
+
+
+-- -- update last name
+-- UPDATE member 
+--     SET `Last Name` = "Goldberg"
+--     WHERE `Student Number` = 20230001
+
+
+-- -- update gender
+-- UPDATE member 
+--     SET `Gender` = "Nonbinary"
+--     WHERE `Student Number` = 20230001
+
+
+-- -- update degprog
+-- UPDATE member 
+--     SET `Degree Program` = "BS Psychology"
+--     WHERE `Student Number` = 20230001
+
+
+-- -- update batch
+-- UPDATE member_batch 
+--     SET `Batch` = "2015"
+--     WHERE `Student Number` = 20230001
+--         AND `Organization ID` = 11111111;

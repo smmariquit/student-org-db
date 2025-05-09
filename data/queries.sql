@@ -94,6 +94,21 @@ INSERT INTO member_batch(`Student Number`, `Organization ID`, `Batch`) VALUES
 ('20230004', 44444444, 2023),
 ('20230005', 55555555, 2024);
 
+CREATE TABLE student_role(
+    `Student Number` varchar(128) NOT NULL, 
+    `Organization ID` int NOT NULL,
+    `Committee Name` varchar(128) NOT NULL,
+    `Role` varchar(128) NOT NULL,
+    CONSTRAINT PK_Joins PRIMARY KEY(`Student Number`, `Organization ID`, `Committee Name`) 
+);
+
+INSERT INTO student_role(`Student Number`, `Organization ID`, `Committee Name`, `Role`) VALUES
+('20230001', 11111111, 'Snack Patrol', 'Snackmaster'),
+('20230002', 22222222, 'Fundraising Ferrets', 'Finance Head'),
+('20230003', 33333333, 'Otter Awareness', 'Public Relations'),
+('20230004', 44444444, 'Tall Talks', 'Moderator'),
+('20230005', 55555555, 'Shell Squad', 'Logistics');
+
 CREATE TABLE committee (
     `Committee Name` varchar(128) NOT NULL,
     `Organization ID` int NOT NULL,
@@ -160,69 +175,150 @@ INSERT INTO payment(`Fee Name`, `Student Number`, `Organization ID`, `Full Payme
 ('Turtle Shell Care', '20230005', 55555555, '2024-12-10', '2024-12-12', FALSE);
 
 
-
-
 -- 1. View all members of the organization by role, status, gender, degree program, batch (year of membership), and committee. (Note: we assume one committee membership only per organization per semester) 
-
 CREATE OR REPLACE VIEW membersvu(student_number, last_name, first_name, role, status, gender, degree_program, batch, committee)
-    AS SELECT m.StudentNumber, m.LastName, m.FirstName, 
-    sr.Role, j.Status, m.Gender, m.DegreeProgram, 
-    mb.Batch, sr.CommitteeName
-    FROM Member m
-    JOIN MemberBatch mb on m.StudentNumber = mb.StudentNumber 
-    JOIN StudentRole sr on mb.StudentNumber = sr.StudentNumber
-    JOIN Joins j ON m.StudentNumber = j.StudentNumber
-        AND mb.OrganizationId = j.OrganizationId
-    WHERE sr.OrganizationId = "givenOrganization"  
+    AS SELECT m.`Student Number`, m.`Last Name`, m.`First Name`, 
+        sr.`Role`, j.`Member Status`, m.`Gender`, m.`Degree Program`, 
+        mb.`Batch`, sr.`Committee Name`
+    FROM member m
+    JOIN member_batch mb 
+        ON m.`Student Number` = mb.`Student Number` 
+    JOIN student_role sr 
+        ON m.`Student Number` = sr.`Student Number`
+        AND mb.`Organization ID` = sr.`Organization ID`
+    JOIN joins j 
+        ON m.`Student Number` = j.`Student Number`
+        AND j.`Organization ID` = sr.`Organization ID`
+    WHERE sr.`Organization ID` = 11111111;
 
 
--- 2. View members for a given organization with unpaid membership fees or dues for a given semester and academic year. 
-CREATE OR REPLACE VIEW unpaid_fees_orgvu(student_number, last_name, first_name, fee_name, amount, due_date) 
-    AS SELECT m.StudentNumber, m.LastName, m.FirstName, f.FeeName, f.Amount, f.DueDate
-    FROM Member m 
-    JOIN Fee f ON m.StudentNumber = f.StudentNumber 
-    WHERE f.Status = 'unpaid' 
-    AND f.OrganizationId = 'givenOrganization'
-    AND f.AcademicYear = 'givenAcademicYear'
-    AND f.Semester = 'givenSemester';
-
+-- 2. View members for a given organization with unpaid membership fees or dues for a given semester and academic year. WORKING
+CREATE OR REPLACE VIEW unpaid_fees_orgvu(organization_id, student_number, last_name, first_name, fee_name, amount, due_date, status)
+    AS SELECT f.`Organization ID`, m.`Student Number`, m.`Last Name`, m.`First Name`, f.`Fee Name`, f.`Amount`, f.`Due Date`, f.`Status`
+    FROM member m
+    JOIN fee f ON m.`Student Number` = f.`Student Number`
+    WHERE f.`Status` = 'Unpaid'
+    AND f.`Organization ID` = 11111111
+    AND f.`Academic Year` = '2024-2025'
+    AND f.`Semester` = '1st';
 
 
 -- 3. View a member's unpaid membership fees or dues for all their organizations (Member's POV). 
-CREATE OR REPLACE VIEW unpaid_fees_membervu(organization_id, fee_name, amount, due_date, academic_year, semester)
-    AS SELECT f.OrganizationId, f.FeeName, f.Amount, f.DueDate, f.AcademicYear, f.Semester
-    FROM Fee f
-    WHERE f.Status = 'unpaid';
+CREATE OR REPLACE VIEW unpaid_fees_membervu(student_number, organization_id, fee_name, amount, due_date, academic_year, semester)
+    AS SELECT f.`Student Number`, f.`Organization ID`, f.`Fee Name`, f.`Amount`, f.`Due Date`, f.`Academic Year`, f.`Semester`
+    FROM fee f
+    WHERE f.`Status` = 'Unpaid';
+    
+    -- specify which student when viewing view, ex:
+        -- SELECT * FROM unpaid_fees_membervu
+        -- WHERE student_number = '20230001';
 
 
 -- 4. View all executive committee members of a given organization for a given academic year. 
-
-CREATE OR REPLACE VIEW executive_comittee_membersvu(student_number, last_name, first_name, committee_name, semester)
-    AS SELECT m.StudentNumber, m.LastName, m.FirstName, sr.CommitteeName, c.Semester
-    FROM Member m
-    JOIN StudentRole sr ON m.StudentNumber = sr.StudentNumber
-    JOIN Committee c ON sr.CommitteeName = c.CommitteeName
-        AND sr.OrganizationId = c.OrganizationId
-    WHERE sr.OrganizationId = 'givenOrganization'
-    AND c.AcademicYear = 'givenAcademicYear'
-    AND c.CommitteeName = 'Executive';
+CREATE OR REPLACE VIEW executive_committee_membersvu(student_number, last_name, first_name, committee_name, semester)
+    AS SELECT m.`Student Number`, m.`Last Name`, m.`First Name`, sr.`Committee Name`, c.`Semester`
+    FROM member m
+    JOIN student_role sr ON m.`Student Number` = sr.`Student Number`
+    JOIN committee c ON sr.`Committee Name` = c.`Committee Name`
+        AND sr.`Organization ID` = c.`Organization ID`
+    WHERE sr.`Organization ID` = 11111111
+    AND c.`Academic Year` = '2024-2025'
+    AND c.`Committee Name` = 'Executive';
 
 
 -- 5. View all Presidents (or any other role) of a given organization for every academic year in reverse chronological order (current to past).
+CREATE OR REPLACE VIEW organization_rolevu(student_number, last_name, first_name, role, academic_year)
+    AS SELECT m.`Student Number`, m.`Last Name`, m.`First Name`, j.`Member Role`, j.`Academic Year`
+    FROM member m
+    JOIN joins j ON m.`Student Number` = j.`Student Number`
+    WHERE j.`Member Role` = 'President'
+        AND j.`Organization ID` = 11111111
+    ORDER BY STR_TO_DATE(CONCAT(SUBSTRING_INDEX(j.`Academic Year`, '-', 1), '-01-01'), '%Y-%m-%d') DESC;
 
-CREATE OR REPLACE VIEW organization_rolevu(student_number, last_name, first_name, academic_year)
-    AS SELECT m.StudentNumber, m.LastName, m.FirstName, j.AcademicYear
-    FROM Member m
-    JOIN Joins j ON m.StudentNumber = j.StudentNumber
-    WHERE j.Role = 'givenRole'
-        AND j.OrganizationId = 'givenOrgId'
--- ordering should be in view query (https://stackoverflow.com/questions/15187676/create-a-view-with-order-by-clause)
+
+-- -- 6. View all late payments made by all members of a given organization for a given semester and academic year. 
+-- -- 7. View the percentage of active vs inactive members of a given organization for the last n semesters. (Note: n is a positive integer) 
+-- -- 8. View all alumni members of a given organization as of a given date. 
+-- -- 9. View the total amount of unpaid and paid fees or dues of a given organization as of a given 
+-- -- date. 
+-- -- 10. View the member/s with the highest debt of a given organization for a given semester. 
+
+-- update student number
+UPDATE member 
+    SET `Student Number` = 20231111
+    WHERE `Student Number` = 20230001;
+
+UPDATE joins 
+    SET `Student Number` = 20231111
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+
+UPDATE member_batch 
+    SET `Student Number` = 20231111
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+
+UPDATE student_role 
+    SET `Student Number` = 20231111
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+
+UPDATE fee
+    SET `Student Number` = 20231111
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+
+UPDATE payment 
+    SET `Student Number` = 20231111
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
 
 
--- 6. View all late payments made by all members of a given organization for a given semester and academic year. 
--- 7. View the percentage of active vs inactive members of a given organization for the last n semesters. (Note: n is a positive integer) 
--- 8. View all alumni members of a given organization as of a given date. 
--- 9. View the total amount of unpaid and paid fees or dues of a given organization as of a given 
--- date. 
--- 10. View the member/s with the highest debt of a given organization for a given semester. 
+-- update first name
+UPDATE member 
+    SET `First Name` = "Joe"
+    WHERE `Student Number` = 20230001
 
+
+-- update last name
+UPDATE member 
+    SET `Last Name` = "Goldberg"
+    WHERE `Student Number` = 20230001
+
+
+-- update gender
+UPDATE member 
+    SET `Gender` = "Nonbinary"
+    WHERE `Student Number` = 20230001
+
+
+-- update degprog
+UPDATE member 
+    SET `Degree Program` = "BS Psychology"
+    WHERE `Student Number` = 20230001
+
+
+-- update batch
+UPDATE member_batch 
+    SET `Batch` = "2015"
+    WHERE `Student Number` = 20230001
+        AND `Organization ID` = 11111111;
+
+-- update organization name
+UPDATE organization 
+    SET `Name` = "Society of Societies"
+    WHERE `Organization ID` = 11111111;
+
+
+-- update 
+
+-- Update Fee
+--     → Input: Select Fee Record
+
+-- delete member
+-- DELETE FROM member WHERE `Student Number` = 20230001;
+-- DELETE FROM joins WHERE `Student Number` = 20230001;
+-- DELETE FROM member_batch WHERE `Student Number` = 20230001;
+-- DELETE FROM student_role WHERE `Student Number` = 20230001;
+-- DELETE FROM fee WHERE `Student Number` = 20230001;
+-- DELETE FROM payment WHERE `Student Number` = 20230001;

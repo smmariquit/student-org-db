@@ -1,203 +1,213 @@
 import mariadb
-from typing import Optional # An Optional is like a Nullable in other languages. It's like a Maybe in Haskell or an Option in Rust. Here, we apply it in the Middle Name field because some people do not have middle names.
 
 def print_student_header():
-    print("""╔════════════════════════════════════════════════════════════╗
-║                     👥 Student Management                  ║
-╚════════════════════════════════════════════════════════════╝""")
+    print("""┌────────────────────────────────────────────────────────────
+│                 👥 Student Management                     """)
 
 def print_student_menu():
     print("""📋 Student Menu:
-╔════════════════════════════════════════════════════════════╗
-║ [1] ➕ Add Student                                         ║
-║ [2] ✏️  Update Student                                      ║
-║ [3] 🗑️  Delete Student                                      ║
-║ [4] 👀 View Students                                       ║
-║ [0] ↩️  Back                                                ║
-╚════════════════════════════════════════════════════════════╝""")
+┌────────────────────────────────────────────────────────────
+│ [1] ➕ Add Student                                        
+│ [2] ✏️  Update Student                                     
+│ [3] 🗑️  Delete Student                                     
+│ [4] 👀 View Students                                      
+│ [0] ↩️  Back                                                
+└────────────────────────────────────────────────────────────""")
 
-def add_student():
-    print("""╔════════════════════════════════════════════════════════════╗
-║                     ➕ Add New Student                     ║
-╚════════════════════════════════════════════════════════════╝""")
-    student_number = input("📚 Enter Student Number: ")
+def add_student(conn):
+    print("""┌────────────────────────────────────────────────────────────
+│                    ➕ Add New Student                     """)
+    student_id = input("🎓 Enter Student ID: ")
     first_name = input("👤 Enter First Name: ")
+    middle_name = input("👤 Enter Middle Name (press Enter if none): ")
     last_name = input("👤 Enter Last Name: ")
-    gender = input("⚧ Enter Gender (M/F): ")
-    degree_program = input("🎓 Enter Degree Program: ")
-    batch = input("📅 Enter Batch Year (e.g. 2022): ")
+    gender = input("👥 Enter Gender: ")
+    degree_program = input("📚 Enter Degree Program: ")
     
-    print("\n📝 Student Information to be added:")
-    print("╔════════════════════════════════════════════════════════════")
-    print(f"║ 📚 Student Number: {student_number}")
-    print(f"║ 👤 Name: {first_name} {last_name}")
-    print(f"║ ⚧ Gender: {gender}")
-    print(f"║ 🎓 Degree Program: {degree_program}")
-    print(f"║ 📅 Batch: {batch}")
-    print("╚════════════════════════════════════════════════════════════")
-    print("\n💾 Student would be added to database here.")
+    try:
+        cursor = conn.cursor()
+        
+        # Insert the new student into member table
+        cursor.execute(
+            """INSERT INTO member 
+               (`Student Number`, `First Name`, `Middle Name`, `Last Name`, `Gender`, `Degree Program`) 
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (student_id, first_name, middle_name or None, last_name, gender, degree_program) # If middle name is empty, it will be Falsy. Since it's OR'd to None, it will only not be None if middle_name is not empty. https://www.freecodecamp.org/news/truthy-and-falsy-values-in-python/
+        )
+        conn.commit() # In mariadb-python, this saves data. This is different from MariaDB commits.
+        
+        print("\n📝 Student Information to be added:")
+        print("┌────────────────────────────────────────────────────────────")
+        print(f"│ 🎓 ID: {student_id}")
+        print(f"│ 👤 Name: {first_name} {middle_name + ' ' if middle_name else ''}{last_name}") # If no middle name, it will not print anything.
+        print(f"│ 👥 Gender: {gender}")
+        print(f"│ 📚 Degree Program: {degree_program}")
+        print("└────────────────────────────────────────────────────────────")
+        print("\n✅ Student successfully added to database!")
+        
+    except mariadb.Error as e:
+        print(f"\n❌ Error adding student: {e}")
 
-def update_student():
-    print("""╔════════════════════════════════════════════════════════════╗
-║                     ✏️  Update Student                      ║
-╚════════════════════════════════════════════════════════════╝""")
+def update_student(conn):
+    print("""┌────────────────────────────────────────────────────────────
+│                     ✏️  Update Student                     """)
     student_id = input("🔍 Enter Student ID to update: ")
     
-    print("\n📋 Current Student Information:")
-    print("╔════════════════════════════════════════════════════════════╗")
-    print(f"║ 📚 Student Number: 2023-12345")
-    print(f"║ 👤 Name: John Doe")
-    print(f"║ ⚧ Gender: M")
-    print(f"║ 🎓 Degree Program: BS Computer Science")
-    print(f"║ 📅 Batch: 2023")
-    print("╚════════════════════════════════════════════════════════════╝")
-    
-    while True:
-        print("\n📝 What would you like to update?")
-        print("╔════════════════════════════════════════════════════════════╗")
-        print("║ [1] 📚 Student Number                                      ║")
-        print("║ [2] 👤 Name                                                ║")
-        print("║ [3] ⚧ Gender                                               ║")
-        print("║ [4] 🎓 Degree Program                                      ║")
-        print("║ [5] 📅 Batch                                               ║")
-        print("║ [0] ↩️  Back                                                ║")
-        print("╚════════════════════════════════════════════════════════════╝")
+    try:
+        cursor = conn.cursor()
         
-        choice = input("\n👉 Enter your choice: ")
+        # Get current student info
+        cursor.execute(
+            "SELECT student_id, name FROM students WHERE student_id = ?",
+            (student_id,)
+        )
+        student = cursor.fetchone() # Defensive programming. If somehow there are duplicate student IDs, it will only fetch the first one.
         
-        if choice == "0":
-            break
+        if student:
+            print("\n📋 Current Student Information:")
+            print("┌────────────────────────────────────────────────────────────")
+            print(f"│ 🎓 ID: {student[0]}")
+            print(f"│ 👤 Name: {student[1]} {student[2] + ' ' if student[2] else ''}{student[3]}") # If no middle name, it will not print anything.
+            print(f"│ 👥 Gender: {student[4]}")
+            print(f"│ 📚 Degree Program: {student[5]}")
+            print("└────────────────────────────────────────────────────────────")
             
-        if choice == "1":
-            new_number = input("📚 Enter new Student Number: ")
-            print(f"✅ Student number would be updated to: {new_number}")
-        elif choice == "2":
-            first_name = input("👤 Enter new First Name: ")
-            last_name = input("👤 Enter new Last Name: ")
-            print(f"✅ Name would be updated to: {first_name} {last_name}")
-        elif choice == "3":
-            new_gender = input("⚧ Enter new Gender (M/F): ").upper()
-            print(f"✅ Gender would be updated to: {new_gender}")
-        elif choice == "4":
-            new_program = input("🎓 Enter new Degree Program: ")
-            print(f"✅ Degree program would be updated to: {new_program}")
-        elif choice == "5":
-            new_batch = input("📅 Enter new Batch Year: ")
-            print(f"✅ Batch would be updated to: {new_batch}")
-        
-        print("💾 Update would be saved to database here.")
+            while True:
+                print("\n📝 What would you like to update?")
+                print("┌────────────────────────────────────────────────────────────")
+                print("│ [1] 👤 Name                                                ")
+                print("│ [0] ↩️  Back                                                ")
+                print("└────────────────────────────────────────────────────────────")
+                
+                choice = input("Enter your choice: ")
+                if choice == "0":
+                    break
+                elif choice == "1":
+                    new_name = input("👤 Enter new Student Name: ")
+                    cursor.execute(
+                        "UPDATE students SET name = ? WHERE student_id = ?",
+                        (new_name, student_id)
+                    )
+                    conn.commit()
+                    print(f"✅ Student name updated to: {new_name}")
+        else:
+            print(f"\n❌ Student with ID {student_id} not found!")
+            
+    except mariadb.Error as e:
+        print(f"\n❌ Error updating student: {e}")
 
-def delete_student():
-    print("""╔════════════════════════════════════════════════════════════╗
-║                     🗑️  Delete Student                      ║
-╚════════════════════════════════════════════════════════════╝""")
+def delete_student(conn):
+    print("""┌────────────────────────────────────────────────────────────
+│                     🗑️  Delete Student                     """)
     student_id = input("🔍 Enter Student ID to delete: ")
     
-    print("\n⚠️ Student Information to be deleted:")
-    print("╔════════════════════════════════════════════════════════════╗")
-    print(f"║ 📚 Student Number: 2023-12345")
-    print(f"║ 👤 Name: John Doe")
-    print(f"║ ⚧ Gender: M")
-    print(f"║ 🎓 Degree Program: BS Computer Science")
-    print(f"║ 📅 Batch: 2023")
-    print("╚════════════════════════════════════════════════════════════╝")
-    
-    confirm = input("\n⚠️ Are you sure you want to delete this student? (Y/N): ").upper()
-    if confirm == "Y":
-        print("🗑️ Student would be deleted from database here.")
+    try:
+        cursor = conn.cursor()
+        
+        # Get student info before it gets deleted
+        cursor.execute(
+            "SELECT student_id, name FROM students WHERE student_id = ?",
+            (student_id,)
+        )
+        student = cursor.fetchone()
+        
+        if student:
+            print("\n⚠️  Student Information to be deleted:")
+            print("┌────────────────────────────────────────────────────────────")
+            print(f"│ 🎓 ID: {student[0]}")
+            print(f"│ 👤 Name: {student[1]} {student[2] + ' ' if student[2] else ''}{student[3]}") # If no middle name, it will not print anything.
+            print(f"│ 👥 Gender: {student[4]}")
+            print(f"│ 📚 Degree Program: {student[5]}")
+            print("└────────────────────────────────────────────────────────────")
+            
+            confirm = input("\n⚠️  Are you sure you want to delete this student? (Y/N): ").upper()
+            if confirm == "Y":
+                cursor.execute(
+                    "DELETE FROM students WHERE student_id = ?",
+                    (student_id,)
+                )
+                conn.commit()
+                print("✅ Student successfully deleted from database!")
+        else:
+            print(f"\n❌ Student with ID {student_id} not found!")
+            
+    except mariadb.Error as e:
+        print(f"\n❌ Error deleting student: {e}")
 
-def view_students():
+def view_students(conn):
     while True:
-        print("""╔════════════════════════════════════════════════════════════╗
-║                     👀 View Students                       ║
-╚════════════════════════════════════════════════════════════╝""")
+        print("""┌────────────────────────────────────────────────────────────
+│                     👀 View Students                      """)
         print("📋 View Options:")
-        print("╔════════════════════════════════════════════════════════════╗")
-        print("║ [1] 📋 Print All Students                                 ║")
-        print("║ [2] 🔍 Find Student by ID                                 ║")
-        print("║ [3] 🏢 Filter by Organization                            ║")
-        print("║ [4] 📅 Filter by Batch                                   ║")
-        print("║ [0] ↩️  Back                                                ║")
-        print("╚════════════════════════════════════════════════════════════╝")
+        print("┌────────────────────────────────────────────────────────────")
+        print("│ [1] 📋 View All Students                                   ")
+        print("│ [0] ↩️  Back                                                ")
+        print("└────────────────────────────────────────────────────────────")
         
-        choice = input("\n👉 Enter your choice: ")
-        
+        choice = input("Enter your choice: ")
         if choice == "0":
             break
-            
-        if choice == "1":
-            print("\n📋 Sample Student List:")
-            print("╔════════════════════════════════════════════════════════════╗")
-            print("║ 🔢 ID: 1")
-            print("║ 📚 Student Number: 2023-12345")
-            print("║ 👤 Name: John Doe")
-            print("║ ⚧ Gender: M")
-            print("║ 🎓 Degree Program: BS Computer Science")
-            print("║ 📅 Batch: 2023")
-            print("╚════════════════════════════════════════════════════════════╝")
-            
-            print("\n╔════════════════════════════════════════════════════════════╗")
-            print("║ 🔢 ID: 2")
-            print("║ 📚 Student Number: 2023-12346")
-            print("║ 👤 Name: Jane Smith")
-            print("║ ⚧ Gender: F")
-            print("║ 🎓 Degree Program: BS Information Technology")
-            print("║ 📅 Batch: 2023")
-            print("╚════════════════════════════════════════════════════════════╝")
+        elif choice == "1":
+            try:
+                cursor = conn.cursor()
                 
-        elif choice == "2":
-            student_id = input("🔍 Enter Student ID: ")
-            print(f"\n🔍 Searching for student with ID: {student_id}")
-            print("\n📋 Student Information:")
-            print("╔════════════════════════════════════════════════════════════╗")
-            print("║ 📚 Student Number: 2023-12345")
-            print("║ 👤 Name: John Doe")
-            print("║ ⚧ Gender: M")
-            print("║ 🎓 Degree Program: BS Computer Science")
-            print("║ 📅 Batch: 2023")
-            print("╚════════════════════════════════════════════════════════════╝")
+                # Use the query from queries.py
+                query = """
+                    SELECT 
+                        `Student Number`,
+                        `First Name`,
+                        `Middle Name`,
+                        `Last Name`,
+                        `Gender`,
+                        `Degree Program`
+                    FROM member
+                    ORDER BY `Student Number`
+                """
+                cursor.execute(query)
+                students = cursor.fetchall()
                 
-        elif choice == "3":
-            org_id = input("🏢 Enter Organization ID: ")
-            print(f"\n👥 Students in Organization {org_id}:")
-            print("╔════════════════════════════════════════════════════════════╗")
-            print("║ 🔢 ID: 1")
-            print("║ 📚 Student Number: 2023-12345")
-            print("║ 👤 Name: John Doe")
-            print("║ ⚧ Gender: M")
-            print("║ 🎓 Degree Program: BS Computer Science")
-            print("║ 📅 Batch: 2023")
-            print("╚════════════════════════════════════════════════════════════╝")
-                
-        elif choice == "4":
-            batch = input("📅 Enter Batch Year: ")
-            print(f"\n👥 Students in Batch {batch}:")
-            print("╔════════════════════════════════════════════════════════════╗")
-            print("║ 🔢 ID: 1")
-            print("║ 📚 Student Number: 2023-12345")
-            print("║ 👤 Name: John Doe")
-            print("║ ⚧ Gender: M")
-            print("║ 🎓 Degree Program: BS Computer Science")
-            print("║ 📅 Batch: 2023")
-            print("╚════════════════════════════════════════════════════════════╝")
+                if students:
+                    print("\n📋 Student List:")
+                    for student in students:
+                        student_id = student[0]
+                        first_name = student[1]
+                        middle_name = student[2] if student[2] else ""
+                        last_name = student[3]
+                        gender = student[4]
+                        degree = student[5]
+                        
+                        # Format the name with middle name if present
+                        full_name = f"{first_name} {middle_name + ' ' if middle_name else ''}{last_name}"
+                        
+                        print("┌────────────────────────────────────────────────────────────")
+                        print(f"│ 🎓 ID: {student_id}")
+                        print(f"│ 👤 Name: {full_name}")
+                        print(f"│ 👥 Gender: {gender}")
+                        print(f"│ 📚 Degree: {degree}")
+                        print("└────────────────────────────────────────────────────────────")
+                else:
+                    print("\n📋 No students found in the database.")
+                    
+            except mariadb.Error as e:
+                print(f"\n❌ Error viewing students: {e}")
 
-def main():
+def main(conn):
     while True:
         print_student_header()
         print_student_menu()
-        
-        choice = input("\n👉 Enter your choice: ")
+        choice = input("Enter your choice: ")
         
         if choice == "0":
             break
-            
-        if choice == "1":
-            add_student()
+        elif choice == "1":
+            add_student(conn)
         elif choice == "2":
-            update_student()
+            update_student(conn)
         elif choice == "3":
-            delete_student()
+            delete_student(conn)
         elif choice == "4":
-            view_students()
-        else:
-            print("❌ Invalid choice! Please try again.")
+            view_students(conn)
+
+if __name__ == "__main__": # Best practice for OOP in Python. When you import this file, it will not run automatically because __name__ will be the name of the file.
+                            # However, when you run this file directly via python main.py, __name__ will be "__main__" and the code below will run.
+    main()

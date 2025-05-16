@@ -20,6 +20,7 @@ import mariadb # Import the official MariaDB connector for Python
 import os # Import the OS module to read environment variables, which is necessary for the security of the database connection.
 from dotenv import load_dotenv
 from src import students, organizations, membership, fees
+from src import gui
 from data import models, queries
 
 # Load environment variables
@@ -29,7 +30,7 @@ load_dotenv()
 DB_USER = os.getenv('DB_USER')
 DB_PASSWORD = os.getenv('DB_PASSWORD')
 DB_HOST = os.getenv('DB_HOST')
-DB_NAME = os.getenv('DB_NAME')
+DB_NAME = os.getenv('DB_DATABASE')
 
 # Connect to MariaDB
 try:
@@ -41,52 +42,85 @@ try:
         database=DB_NAME
     )
     
+    # Select the database
+    cursor = conn.cursor()
+    cursor.execute(f"USE {DB_NAME}")
+    
     print("✅ Successfully connected to MariaDB!")
 
-    # The cursor is basically the tool that accesses the ros in the MySQL table. Basically a way to show na "the database is currently here"
-    cursor = conn.cursor()
-   
 except mariadb.Error as e:
     print(f"❌ Error connecting to MariaDB: {e}")
     exit(1)
 
-# Cute ASCII art header and menu xD
+# Options to navigate the program 
 def print_header():
-    print("""╔════════════════════════════════════════════════════════════╗
-║                🎓 Student Organization DB 🎓               ║
-╚════════════════════════════════════════════════════════════╝""")
+    print("""┌────────────────────────────────────────────────────────────
+│                🎓 Student Organization DB 🎓               """)
 
 def print_menu():
-    print("""📋 Main Menu:
-╔════════════════════════════════════════════════════════════╗
-║ [1] 👥 Manage Students                                     ║
-║ [2] 🏢 Manage Organizations                                ║
-║ [3] 🤝 Manage Memberships                                  ║
-║ [4] 💰 Manage Fees                                         ║
-║ [0] 🚪 Exit                                                ║
-╚════════════════════════════════════════════════════════════╝""")
+    print("""┌────────────────────────────────────────────────────────────
+│ 📋 Main Menu:
+├────────────────────────────────────────────────────────────
+│ [1] 👥 Manage Students                                     
+│ [2] 🏢 Manage Organizations                                
+│ [3] 🤝 Manage Memberships                                  
+│ [4] 💰 Manage Fees                                         
+│ [0] 🚪 Exit                                                
+└────────────────────────────────────────────────────────────""")
 
-# This main function is the entry point of the program. See the huge comment below for the CLI flow that we devised.
-def main():
+def print_interface_menu():
+    print("""┌────────────────────────────────────────────────────────────
+│ 📋 Choose Interface:
+├────────────────────────────────────────────────────────────
+│ [1] 🖥️  Command Line Interface (CLI)                       
+│ [2] 🖼️  Graphical User Interface (GUI)                     
+│ [0] 🚪 Exit                                                
+└────────────────────────────────────────────────────────────""")
+
+def cli_main():
     while True:
         print_header()
         print_menu()
         
         try:
-            choice = input("👉 Enter your choice: ")
+            choice = input("\n👉 Enter your choice: ")
             
             if choice == "0":
                 print("\n👋 Thank you for using the Student Organization Database!")
                 break
                 
             if choice == "1":
-                students.main()
+                students.main(conn)
             elif choice == "2":
-                organizations.main()
+                organizations.main(conn)
             elif choice == "3":
-                membership.main()
+                membership.main(conn)
             elif choice == "4":
-                fees.main()
+                fees.main(conn)
+            else:
+                print("❌ Invalid choice! Please try again.")
+                
+        except ValueError:
+            print("❌ Please enter a valid number!")
+        except Exception as e:
+            print(f"❌ An error occurred: {e}")
+
+def main():
+    while True:
+        print_header()
+        print_interface_menu()
+        
+        try:
+            choice = input("\n👉 Enter your choice: ")
+            
+            if choice == "0":
+                print("\n👋 Thank you for using the Student Organization Database!")
+                break
+                
+            if choice == "1":
+                cli_main()
+            elif choice == "2":
+                gui.main()
             else:
                 print("❌ Invalid choice! Please try again.")
                 

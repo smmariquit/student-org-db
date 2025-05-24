@@ -33,7 +33,7 @@ GRANT CREATE, UPDATE, DROP, DELETE, INSERT, SELECT ON organization.* TO 'organiz
 USE organization;
 
 CREATE TABLE organization (
-    `Organization ID` int NOT NULL,
+    `Organization ID` int NOT NULL AUTO_INCREMENT,
     `Organization Name` varchar(128),
     CONSTRAINT PK_Organization PRIMARY KEY (`Organization ID`)
 );
@@ -312,14 +312,14 @@ UPDATE student_role
 -- update organization name
 UPDATE organization 
     SET `Name` = "Society of Societies"
-    WHERE `Organization ID` = 11111111;
+    WHERE `Organization ID` = 22222222;
 
--- update committee role
+-- update committee role (assuming committees can have multiple roles)
 UPDATE committee_role  
     SET `Role` = "Snackeater"
     WHERE `Organization ID` = 11111111
         AND `Committee Name` = "Snack Patrol";
-
+        AND `Role` = "Snackmaster";
 
 -- update membership status
 UPDATE joins 

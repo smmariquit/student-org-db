@@ -27,12 +27,13 @@
 -- stimmie: I feel like we should have foreign keys. I'll ask Ma'am Mira if pwedeng mag-deviate sa Milestone 2.
 -- stimmie: apparently the primary key cannot be named in mysql???
 
-CREATE USER 'organizationer'@'localhost' IDENTIFIED BY 'uplbsqlsociety';
+CREATE OR REPLACE USER 'organizationer'@'localhost' IDENTIFIED BY 'uplbsqlsociety';
+DROP DATABASE IF EXISTS organization;
 CREATE DATABASE IF NOT EXISTS organization;
 GRANT CREATE, UPDATE, DROP, DELETE, INSERT, SELECT ON organization.* TO 'organizationer'@'localhost';
 USE organization;
 
-CREATE TABLE organization (
+CREATE TABLE IF NOT EXISTS organization (
     `Organization ID` int NOT NULL AUTO_INCREMENT,
     `Organization Name` varchar(128),
     CONSTRAINT PK_Organization PRIMARY KEY (`Organization ID`)
@@ -84,7 +85,7 @@ CREATE TABLE member_batch (
     `Student Number` varchar(128) NOT NULL,
     `Organization ID` int NOT NULL,
     `Batch` int NOT NULL, 
-    CONSTRAINT PK_Joins PRIMARY KEY(`Student Number`, `Organization ID`, `Batch`) -- Makes more sense na a student can only have one batch kaya kasama siya dapat sa primary key
+    CONSTRAINT PK_MemberBatch PRIMARY KEY(`Student Number`, `Organization ID`, `Batch`) -- Makes more sense na a student can only have one batch kaya kasama siya dapat sa primary key
 );
 
 INSERT INTO member_batch(`Student Number`, `Organization ID`, `Batch`) VALUES
@@ -99,7 +100,7 @@ CREATE TABLE student_role(
     `Organization ID` int NOT NULL,
     `Committee Name` varchar(128) NOT NULL,
     `Role` varchar(128) NOT NULL,
-    CONSTRAINT PK_Joins PRIMARY KEY(`Student Number`, `Organization ID`, `Committee Name`) 
+    CONSTRAINT PK_StudentRole PRIMARY KEY(`Student Number`, `Organization ID`, `Committee Name`) 
 );
 
 INSERT INTO student_role(`Student Number`, `Organization ID`, `Committee Name`, `Role`) VALUES
@@ -237,14 +238,21 @@ CREATE OR REPLACE VIEW organization_rolevu(student_number, last_name, first_name
 
 
 -- 6. View all late payments made by all members of a given organization for a given semester and academic year. 
-CREATE OR REPLACE VIEW late_paymentsvu(fee_name, student_number, organization_id, due_date, payment_late?)
-    AS SELECT f.`Fee Name`, f.`Student Number`, f.`Organization ID`, f.`Due Date`, f.`Payment Late?`
-    FROM fee f
-    JOIN joins j ON f.`Student Number` = j.`Student Number`
-    WHERE f.`Organization ID` = 11111111;
-        AND f.`Payment Late?` = TRUE;
-        AND j.`Academic Year` = "2024-2025";
-        AND j.`Semester` = "1st";
+CREATE OR REPLACE VIEW late_paymentsvu AS
+SELECT 
+    f.`Fee Name` AS fee_name, 
+    f.`Student Number` AS student_number, 
+    f.`Organization ID` AS organization_id, 
+    f.`Due Date` AS due_date, 
+    p.`Payment Late?` AS payment_late
+FROM fee f
+JOIN joins j ON f.`Student Number` = j.`Student Number`
+JOIN payment p ON p.`Student Number` = f.`Student Number`
+WHERE f.`Organization ID` = 11111111
+  AND p.`Payment Late?` = TRUE
+  AND j.`Academic Year` = '2024-2025'
+  AND j.`Semester` = '1st';
+
 
 
 -- 7. View the percentage of active vs inactive members of a given organization for the last n semesters. (Note: n is a positive integer)
@@ -253,7 +261,7 @@ CREATE OR REPLACE VIEW late_paymentsvu(fee_name, student_number, organization_id
 
 -- 8. View all alumni members of a given organization as of a given date.
 CREATE OR REPLACE VIEW alumnivu(student_number, first_name, last_name, organization_id, status) 
-    AS SELECT m.`Student Number`, m.`First Name`, m.`Last Name`, j,`Organization ID`, j.`Status`
+    AS SELECT m.`Student Number`, m.`First Name`, m.`Last Name`, j.`Organization ID`, j.`Member Status`
     FROM member m
     JOIN joins j ON m.`Student Number` = j.`Student Number`
     WHERE (j.`Student Number`, j.`Organization ID`, 
@@ -277,16 +285,16 @@ CREATE OR REPLACE VIEW alumnivu(student_number, first_name, last_name, organizat
         GROUP BY j2.`Student Number`, j2.`Organization ID`
     )
     AND j.`Member Status` = 'Alumni'
-    AND m.`Organization ID` = 11111111;
+    AND j.`Organization ID` = 11111111;
 
 
 
 -- 9. View the total amount of unpaid and paid fees or dues of a given organization as of a given date. 
 CREATE OR REPLACE VIEW org_feesvu(organization_name, organization_id, fee_name, amount, due_date, academic_year, semester)
-    AS SELECT o.`Name`, o.`Organization ID`, f.`Fee Name`, f.`Amount`, f.`Due Date`, f.`Academic Year`, f.`Semester`
-    FROM organization m
-    JOIN fee f ON m.`Organization ID` = f.`Organization ID`
-    WHERE m.`Organization ID` = 11111111
+    AS SELECT o.`Organization Name`, o.`Organization ID`, f.`Fee Name`, f.`Amount`, f.`Due Date`, f.`Academic Year`, f.`Semester`
+    FROM organization o
+    JOIN fee f ON o.`Organization ID` = f.`Organization ID`
+    WHERE o.`Organization ID` = 11111111
         AND f.`Due Date` <= '2025-05-01';
 
 
@@ -311,23 +319,23 @@ UPDATE student_role
 
 -- update organization name
 UPDATE organization 
-    SET `Name` = "Society of Societies"
+    SET `Organization Name` = "Society of Societies"
     WHERE `Organization ID` = 22222222;
 
 -- update committee role (assuming committees can have multiple roles)
 UPDATE committee_role  
     SET `Role` = "Snackeater"
     WHERE `Organization ID` = 11111111
-        AND `Committee Name` = "Snack Patrol";
+        AND `Committee Name` = "Snack Patrol"
         AND `Role` = "Snackmaster";
 
 -- update membership status
 UPDATE joins 
-    SET `Status` = "Inactive"
+    SET `Member Status` = "Inactive"
     WHERE `Student Number` = 20230001
         AND `Organization ID` = 11111111
         AND `Academic Year` = "2024-2025"
-        AND `Semester` = "1st"
+        AND `Semester` = "1st";
 
 -- update fee status
 UPDATE fee
@@ -335,8 +343,8 @@ UPDATE fee
     WHERE `Fee Name` = "Annual Dues"
         AND `Student Number` = 20230001
         AND `Organization ID` = 11111111
-        AND `Academic Year` = 2024-2025
-        AND `Semester`= 1st
+        AND `Academic Year` = "2024-2025"
+        AND `Semester`= "1st";
 
 -- update fee due date
 UPDATE fee
@@ -344,8 +352,8 @@ UPDATE fee
     WHERE `Fee Name` = "Annual Dues"
         AND `Student Number` = 20230001
         AND `Organization ID` = 11111111
-        AND `Academic Year` = 2024-2025
-        AND `Semester`= 1st
+        AND `Academic Year` = "2024-2025"
+        AND `Semester`= "1st";
 
 
 -- update full payment date
@@ -354,7 +362,7 @@ UPDATE payment
     WHERE `Fee Name` = "Annual Dues"
         AND `Student Number` = 20230001
         AND `Organization ID` = 11111111
-        AND `Full Payment Date` = '2024-10-02'
+        AND `Full Payment Date` = '2024-10-02';
 
 -- update payment late?
 UPDATE payment
@@ -362,7 +370,7 @@ UPDATE payment
     WHERE `Fee Name` = "Annual Dues"
         AND `Student Number` = 20230001
         AND `Organization ID` = 11111111
-        AND `Full Payment Date` = "2024-11-11"
+        AND `Full Payment Date` = "2024-11-11";
 
 -- update due date
 UPDATE payment
@@ -370,7 +378,7 @@ UPDATE payment
     WHERE `Fee Name` = "Annual Dues"
         AND `Student Number` = 20230001
         AND `Organization ID` = 11111111
-        AND `Full Payment Date` = "2024-11-11"
+        AND `Full Payment Date` = "2024-11-11";
 
 -- delete member from database
 DELETE FROM member 

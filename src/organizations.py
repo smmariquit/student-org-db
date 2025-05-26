@@ -14,51 +14,106 @@ def print_org_menu():
 │ [0] ↩️  Back                                                
 └────────────────────────────────────────────────────────────""")
 
-def add_organization():
+def add_organization(conn):
     print("""┌────────────────────────────────────────────────────────────
 │                    ➕ Add New Organization                 """)
     name = input("🏢 Enter Organization Name: ")
     
-    print("\n📝 Organization Information to be added:")
-    print("┌────────────────────────────────────────────────────────────")
-    print(f"│ 🏢 Name: {name}")
-    print("└────────────────────────────────────────────────────────────")
-    print("\n💾 <Insert database save>")
+    try:
+        cursor = conn.cursor()
 
-def update_organization():
+        cursor.execute("""INSERT INTO organization (`Organization Name`)
+                          VALUES (?)""",
+                       (name,))
+        conn.commit()
+
+        print("\n📝 Organization Information to be added:")
+        print("┌────────────────────────────────────────────────────────────")
+        print(f"│ 🏢 Name: {name}")
+        print("└────────────────────────────────────────────────────────────")
+        print("\n💾 Organization successfully added to database!")
+    
+    except mariadb.Error as e:
+        print(f"\n❌ Error adding organization: {e}")
+
+def update_organization(conn):
     print("""┌────────────────────────────────────────────────────────────
 │                     ✏️  Update Organization                 """)
     org_id = input("🔍 Enter Organization ID to update: ")
     
-    print("\n📋 Current Organization Information:")
-    print("┌────────────────────────────────────────────────────────────")
-    print(f"│ 🔢 ID: 1")
-    print(f"│ 🏢 Name: Alliance of Cat Students for Science UPLB")
-    print("└────────────────────────────────────────────────────────────")
-    
-    while True:
-        print("\n📝 What would you like to update?")
-        print("┌────────────────────────────────────────────────────────────")
-        print("│ [1] 🏢 Name                                                ")
-        print("│ [0] ↩️  Back                                                ")
-        print("└────────────────────────────────────────────────────────────")
-        
-        choice = input("Enter your choice: ")
-        if choice == "0":
-            break
+    try:
+        cursor = conn.cursor()
 
-def delete_organization():
+        cursor.execute(
+            "SELECT * FROM organization WHERE `Organization ID` = ?",
+            (org_id,)
+        )
+        org = cursor.fetchone()
+
+        if org:
+            print("\n📋 Current Organization Information:")
+            print("┌────────────────────────────────────────────────────────────")
+            print(f"│ 🔢 ID: {org[0]}")
+            print(f"│ 🏢 Name: {org[1]}")
+            print("└────────────────────────────────────────────────────────────")
+    
+            while True:
+                print("\n📝 What would you like to update?")
+                print("┌────────────────────────────────────────────────────────────")
+                print("│ [1] 🏢 Name                                                ")
+                print("│ [0] ↩️  Back                                                ")
+                print("└────────────────────────────────────────────────────────────")
+                
+                choice = input("Enter your choice: ")
+                if choice == "0":
+                    break
+                elif choice == "1":
+                    new_name = input("Enter new Organization Name: ")
+                    cursor.execute(
+                        "UPDATE organization SET `Organization Name` = ? WHERE `Organization ID` = ?",
+                        (new_name, org_id))
+                    conn.commit()
+                    print(f"✅ Organization name updated to: {new_name}")
+        else:
+            print(f"\n❌ Organization with ID {org_id} not found!")
+
+    except mariadb.Error as e:
+        print(f"\n❌ Error updating organization: {e}")
+
+def delete_organization(conn):
     print("""┌────────────────────────────────────────────────────────────
 │                     🗑️  Delete Organization                 """)
     org_id = input("🔍 Enter Organization ID to delete: ")
     
-    print("\n⚠️  Organization Information to be deleted:")
-    print("┌────────────────────────────────────────────────────────────")
-    print(f"│ 🔢 ID: 1")
-    print(f"│ 🏷️  Name: Alliance of Cat Students for Science UPLB")
-    print("└────────────────────────────────────────────────────────────")
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM organization WHERE `Organization ID` = ?",
+            (org_id,)
+        )
+        org = cursor.fetchone()
 
-def view_organizations():
+        if org:
+            print("\n⚠️  Organization Information to be deleted:")
+            print("┌────────────────────────────────────────────────────────────")
+            print(f"│ 🔢 ID: {org[0]}")
+            print(f"│ 🏷️  Name: {org[1]}")
+            print("└────────────────────────────────────────────────────────────")
+            confirm = input("\n⚠️  Are you sure you want to delete this organization? (Y/N): ").upper()
+            if confirm == "Y":
+                cursor.execute(
+                    "DELETE FROM organization WHERE `Organization ID` = ?",
+                    (org_id,)
+                )
+                conn.commit()
+                print("✅ Organization successfully deleted from database!")
+        else:
+            print(f"\n❌ Organization with ID {org_id} not found!")
+
+    except mariadb.Error as e:
+        print(f"\n❌ Error deleting organization: {e}")
+
+def view_organizations(conn):
     while True:
         print("""┌────────────────────────────────────────────────────────────
 │                     👀 View Organizations                  """)
@@ -72,18 +127,32 @@ def view_organizations():
         if choice == "0":
             break
         elif choice == "1":
-            print("\n📋 Sample Organization List:")
-            print("┌────────────────────────────────────────────────────────────")
-            print(f"│ 🔢 ID: 1")
-            print(f"│ 🏢 Name: Alliance of Cat Students for Science UPLB")
-            print("└────────────────────────────────────────────────────────────")
-            
-            print("\n┌────────────────────────────────────────────────────────────")
-            print("│ 🔢 ID: 2")
-            print("│ 🏢 Name: Young Squirrel Entrepreneurial Society")
-            print("└────────────────────────────────────────────────────────────")
+            try:
+                cursor = conn.cursor()
 
-def main():
+                cursor.execute("SELECT * FROM organization ORDER BY `Organization Name`")
+                orgs = cursor.fetchall()
+
+                if orgs:
+                    print("\n📋 Organization List:")
+                    print("┌──────────────────────────────────────────────────────────────┬──────────────┐")
+                    print("│ Organization Name                                            │ Org ID       │")
+                    print("├──────────────────────────────────────────────────────────────┼──────────────┤")
+
+                    for org in orgs:
+                        org_id = org[0]  
+                        org_name = org[1]    
+
+                        print(f"│ {org_name:<60} │ {org_id:<12} │")
+
+                    print("└──────────────────────────────────────────────────────────────┴──────────────┘\n")
+                else:
+                    print("\nℹ️  No organizations found.\n")
+            
+            except mariadb.Error as e:
+                print(f"\n❌ Error viewing organizations: {e}")
+
+def main(conn):
     while True:
         print_org_header()
         print_org_menu()
@@ -92,13 +161,13 @@ def main():
         if choice == "0":
             break
         elif choice == "1":
-            add_organization()
+            add_organization(conn)
         elif choice == "2":
-            update_organization()
+            update_organization(conn)
         elif choice == "3":
-            delete_organization()
+            delete_organization(conn)
         elif choice == "4":
-            view_organizations()
+            view_organizations(conn)
 
 if __name__ == "__main__":
     main()

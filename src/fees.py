@@ -506,7 +506,7 @@ def view_fee_reports(conn):
 def view_all_fees(conn):
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM fee")
+        cursor.execute("SELECT * FROM fee ORDERY BY `Fee Name`")
         fees = cursor.fetchall()
         if fees:
             print("\n📋 Fee Details")

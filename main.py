@@ -258,3 +258,55 @@ if __name__ == "__main__":
 #         0. Back
 #     0. Back
 # 0. Back
+
+
+# REVISED CLI FLOW
+# MAIN MENU
+
+# Are you a/an:
+# 1. Member
+# 2. Organization
+
+# 1. Member
+#     -> Input: Member_ID, Current Academic Year (?)
+#     1. View Organizations
+#     2. View Committees
+#     3. View Fees
+#         1. Member's Unpaid Dues Across All Orgs (Report #3)
+#         2. View Late (Assuming late and unpaid, not like report 6) 
+#         3. View All Fees
+# 2. Organization
+#     -> Input: Organization ID
+#     1. Manage Members
+#         1. Add New member
+#         2. Renew membership
+#         3. Update member
+#             1. Update member role (org wide)
+#             2. Update member information (tentative pa ano pwede iedit)
+#         4. Remove member
+#         5. View members
+#             1. View all members 
+#             2. View members by role, status, etc. (Report #1)
+#             3. View roles for every academic year (Report #5) 
+#             4. View percentage of active vs inactive members of a given organization for the last n semesters (Report #7)
+#             5. View alumni members as of a given date (Report #8)
+#     2. Manage Committees
+#         1. Add Committee
+#         2. Update Committee
+#         3. Delete Committee
+#         4. Add Committee member (this alters student_role)
+#         5. Update member role
+#         6. View members per committee (Report #4 pag executive ang input           
+#     3. Manage Fees
+#         1. View Fee Reports
+#             1. Members with Unpaid Dues for Given Semester (Report #2)
+#             2. Late Payments in Given Semester (Report #6)
+#             3. Total Paid and Unpaid Fees as of Date (Report #9)
+#             4. View members with highest debt for a given semester (Report #10) 
+#         2. Add Payment
+#         3. Update Fee
+#         4. Generate Organization Financial Report
+#         5. Delete Fee 
+#             1. Delete Fee From member
+#             2. Delete Fee from database
+#     4. Delete Organization

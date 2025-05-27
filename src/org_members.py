@@ -15,123 +15,90 @@ def print_membership_menu():
 │ [0] ↩️  Back                                                
 └────────────────────────────────────────────────────────────""")
 
-def organization_auth(conn):
+def add_member(conn, organization_id):
     print("""┌────────────────────────────────────────────────────────────
-│                 👥 Organization Management                     """)
-    
-    organization_id = input("🎓 Enter Organization ID: ")
-    
+│                    ➕ Add New Organization Member                     """)
+    student_id = input("🎓 Enter Member Student ID: ")
+    first_name = input("👤 Enter First Name: ")
+    middle_name = input("👤 Enter Middle Name (press Enter if none): ")
+    last_name = input("👤 Enter Last Name: ")
+    gender = input("👥 Enter Gender: ")
+    degree_program = input("📚 Enter Degree Program: ")
+    acad_year = input("👤 Enter Academic Year: ")
+    semester = input("👤 Enter Semester: ")
+    role = input("👤 Enter Member Role: ")
+    status = input("👤 Enter Member Status (Active/Inactive/etc.): ")
+
     try:
         cursor = conn.cursor()
+
+        cursor.execute(
+            """INSERT INTO joins
+            (`Student Number`,
+            `Organization ID`,
+            `Academic Year`,
+            `Semester`,
+            `Role`,
+            `Status`)
+            VALUES (?, ?, ?, ?, ?, ?)""",
+        (student_id, organization_id, acad_year, semester, role, status))
+        conn.commit()
+
+        # if ever the student has multiple orgs (their record already exists in member db)
+        cursor.execute(
+            "SELECT * FROM member WHERE `Student Number` = ?",
+            (student_id,)
+        )
+
+        student = cursor.fetchone();
+        if not student:
+            cursor.execute("""INSERT INTO member
+                        (`Student Number`, 
+                        `First Name`, 
+                        `Middle Name`, 
+                        `Last Name`, 
+                        `Gender`,
+                        `Degree Program`)
+                        VALUES (?, ?, ?, ?, ?, ?)""",
+                        (student_id, first_name, middle_name, last_name, gender, degree_program))
+            conn.commit()
+
+            cursor.execute(
+                """SELECT * FROM member_batch WHERE `Student ID` = ? 
+                    AND `Organization ID` = ?""",
+                (student_id, organization_id)
+            )
+            member = cursor.fetchone()
+        # if member joins org for the first time, add their info to member_batch
+        if not member: 
+            cursor.execute(
+                """INSERT INTO member_batch
+                (`Student Number`,
+                `Organization ID`,
+                `Batch`)
+                VALUES (?, ?, ?)""",
+                (student_id, organization_id, acad_year[:4])
+            )
+            conn.commit()
         
-        cursor.execute("SELECT * FROM organization WHERE `Organization ID` = ?", (organization_id,))
-        organization = cursor.fetchone()
-        if organization:
-            return organization[0]
-        else:
-            print(f"\n❌ Organization with ID {organization_id} not found!")
-            return None
+        print("\n✅ Member successfully added to database!")
+
+        print("\n📝 Member Information to be added:")
+        print("┌────────────────────────────────────────────────────────────")
+        print(f"│ 🎓 Member ID: {student_id}")
+        print(f"│ 🎓 Organization ID: {organization_id}")
+        print(f"│ 👤 Name: {first_name} {middle_name + ' ' if middle_name else ''}{last_name}") # If no middle name, it will not print anything.
+        print(f"│ 👥 Gender: {gender}")
+        print(f"│ 📚 Degree Program: {degree_program}")
+        print(f"│ 📚 Academic Year: {acad_year}")
+        print(f"│ 📚 Semester: {semester}")
+        print(f"│ 📚 Role: {role}")
+        print(f"│ 📚 Status: {status}")
+        print("└────────────────────────────────────────────────────────────")
+        
+        
     except mariadb.Error as e:
-        print(f"\n❌ Error authenticating student: {e}")
-
-def add_member(conn, organization_id):
-    while True:
-        print("""📋 Add Member Menu:
-    ┌────────────────────────────────────────────────────────────
-    │ [1] 👥 Add Member to Organization                                        
-    │ [2] 🚫 Add Member to Committee                                                                    
-    │ [0] ↩️  Back                                                
-    └────────────────────────────────────────────────────────────""")
-        choice = input("Enter your choice: ")
-        if choice == "0":
-            break
-        elif choice == "1":
-            print("""┌────────────────────────────────────────────────────────────
-│                    ➕ Add New Organization Member                     """)
-            student_id = input("🎓 Enter Member Student ID: ")
-            first_name = input("👤 Enter First Name: ")
-            middle_name = input("👤 Enter Middle Name (press Enter if none): ")
-            last_name = input("👤 Enter Last Name: ")
-            gender = input("👥 Enter Gender: ")
-            degree_program = input("📚 Enter Degree Program: ")
-            acad_year = input("👤 Enter Academic Year: ")
-            semester = input("👤 Enter Semester: ")
-            role = input("👤 Enter Member Role: ")
-            status = input("👤 Enter Member Status (Active/Inactive/etc.): ")
-
-            try:
-                cursor = conn.cursor()
-
-                cursor.execute(
-                    """INSERT INTO joins
-                    (`Student Number`,
-                    `Organization ID`,
-                    `Academic Year`,
-                    `Semester`,
-                    `Role`,
-                    `Status`)
-                    VALUES (?, ?, ?, ?, ?, ?)""",
-                (student_id, organization_id, acad_year, semester, role, status))
-                conn.commit()
-
-                # if ever the student has multiple orgs (their record already exists in member db)
-                cursor.execute(
-                    "SELECT * FROM member WHERE `Student Number` = ?",
-                    (student_id,)
-                )
-
-                student = cursor.fetchone();
-                if not student:
-                    cursor.execute("""INSERT INTO member
-                                (`Student Number`, 
-                                `First Name`, 
-                                `Middle Name`, 
-                                `Last Name`, 
-                                `Gender`,
-                                `Degree Program`)
-                                VALUES (?, ?, ?, ?, ?, ?)""",
-                                (student_id, first_name, middle_name, last_name, gender, degree_program))
-                    conn.commit()
-
-                    cursor.execute(
-                        """SELECT * FROM member_batch WHERE `Student ID` = ? 
-                            AND `Organization ID` = ?""",
-                        (student_id, organization_id)
-                    )
-                    member = cursor.fetchone()
-                # if member joins org for the first time, add their info to member_batch
-                if not member: 
-                    cursor.execute(
-                        """INSERT INTO member_batch
-                        (`Student Number`,
-                        `Organization ID`,
-                        `Batch`)
-                        VALUES (?, ?, ?)""",
-                        (student_id, organization_id, acad_year[:4])
-                    )
-                    conn.commit()
-                
-                print("\n✅ Member successfully added to database!")
-
-                print("\n📝 Member Information to be added:")
-                print("┌────────────────────────────────────────────────────────────")
-                print(f"│ 🎓 Member ID: {student_id}")
-                print(f"│ 🎓 Organization ID: {organization_id}")
-                print(f"│ 👤 Name: {first_name} {middle_name + ' ' if middle_name else ''}{last_name}") # If no middle name, it will not print anything.
-                print(f"│ 👥 Gender: {gender}")
-                print(f"│ 📚 Degree Program: {degree_program}")
-                print(f"│ 📚 Academic Year: {acad_year}")
-                print(f"│ 📚 Semester: {semester}")
-                print(f"│ 📚 Role: {role}")
-                print(f"│ 📚 Status: {status}")
-                print("└────────────────────────────────────────────────────────────")
-                
-                
-            except mariadb.Error as e:
-                print(f"\n❌ Error adding member: {e}")
-        elif choice == "2":
-            # TODO: code for add member to committee
-            print("wala pa")
+        print(f"\n❌ Error adding member: {e}")
 
 def update_membership(conn, organization_id):
     print("""┌────────────────────────────────────────────────────────────
@@ -539,20 +506,46 @@ def view_org_members(conn, organization_id):
                     else:
                         print(f"\nℹ️  No members with Degree Program '{member_degprog}' found in Organization {organization_id}.\n")
 
-                    
-                    
+                elif choice == "5":
+                    member_batch = input("Enter member batch (YYYY-YYYY): ")
 
+                    cursor = conn.cursor()
+                
+                    cursor.execute(
+                        """SELECT `Organization ID`,
+                        `Organization Name`,
+                        `Student Number`,
+                        `First Name`,
+                        `Last Name`,
+                        `Gender`,
+                        `Degree Program`,
+                        `Batch`
+                        FROM member_batch mb 
+                        JOIN organization o ON mb.`Organization ID` = o.`Organization ID`
+                        JOIN member m ON mb.`Student Number` = m.`Student Number`
+                        WHERE `Organization ID` = ? AND `Batch` = ?""",
+                        (organization_id, member_batch)
+                    )
 
-                    
+                    results = cursor.fetchall()
 
-        
+                    if results:
+                        print(f"\n📋 Members with Degree Program '{member_degprog}' in Organization {organization_id}")
+                        print("┌──────────────┬────────────────────────────────────┬────────────┬──────────────┬────────────┬────────────┬───────────────┬────────────────────────────┬────────┐")
+                        print("│ Org ID       │ Organization Name                  │ Role       │ Student #    │ First Name │ Last Name  │ Gender        │ Degree Program              │ Batch  │")
+                        print("├──────────────┼────────────────────────────────────┼────────────┼──────────────┼────────────┼────────────┼───────────────┼────────────────────────────┼────────┤")
 
-# Batch, and Committee 
-    
+                        for row in results:
+                            org_id, org_name, role, student_no, first_name, last_name, gender, degree, batch = row
+                            print(f"│ {org_id:<12} │ {org_name:<36} │ {role:<10} │ {student_no:<12} │ {first_name:<10} │ {last_name:<10} │ {gender:<15} │ {degree:<26} │ {batch:<6} │")
 
-def main(conn):
+                        print("└──────────────┴────────────────────────────────────┴────────────┴──────────────┴────────────┴────────────┴───────────────┴────────────────────────────┴────────┘\n")
+
+                    else:
+                        print(f"\nℹ️  No members with Degree Program '{member_degprog}' found in Organization {organization_id}.\n")
+
+def main(conn, organization_id):
     while True:
-        organization_id = organization_auth(conn)
         print_membership_header()
         print_membership_menu()
         choice = input("Enter your choice: ")
@@ -574,8 +567,6 @@ def main(conn):
 if __name__ == "__main__": # Best practice for OOP in Python. When you import this file, it will not run automatically because __name__ will be the name of the file.
                             # However, when you run this file directly via python main.py, __name__ will be "__main__" and the code below will run.
     main()
-
-
 
 
 #     1. Manage Members

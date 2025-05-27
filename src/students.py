@@ -2,24 +2,25 @@ import mariadb
 
 student_id = None
 
-def student_auth(conn):
-    print("""┌────────────────────────────────────────────────────────────
-│                 👥 Student Management                     """)
+# transferred this to main
+# def student_auth(conn):
+#     print("""┌────────────────────────────────────────────────────────────
+# │                 👥 Student Management                     """)
     
-    student_id = input("🎓 Enter Student ID: ")
+#     student_id = input("🎓 Enter Student ID: ")
     
-    try:
-        cursor = conn.cursor()
+#     try:
+#         cursor = conn.cursor()
         
-        cursor.execute("SELECT * FROM member WHERE `Student Number` = ?", (student_id,))
-        student = cursor.fetchone()
-        if student:
-            return student[0]
-        else:
-            print(f"\n❌ Student with ID {student_id} not found!")
-            return None
-    except mariadb.Error as e:
-        print(f"\n❌ Error authenticating student: {e}")
+#         cursor.execute("SELECT * FROM member WHERE `Student Number` = ?", (student_id,))
+#         student = cursor.fetchone()
+#         if student:
+#             return student[0]
+#         else:
+#             print(f"\n❌ Student with ID {student_id} not found!")
+#             return None
+#     except mariadb.Error as e:
+#         print(f"\n❌ Error authenticating student: {e}")
         
 
 def print_student_header():
@@ -330,9 +331,8 @@ def view_students(conn):
             except mariadb.Error as e:
                 print(f"\n❌ Error viewing students: {e}")
 
-def main(conn):
+def main(conn, student_id):
     while True:
-        student_id = student_auth(conn)
         print_student_header()
         print_student_menu()
         choice = input("Enter your choice: ")

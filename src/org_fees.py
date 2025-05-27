@@ -16,21 +16,9 @@ def print_fee_menu():
 │ [0] ↩️  Back                                                
 └────────────────────────────────────────────────────────────""")
     
-def print_fee_report_menu():
-    print("""📋 View Fee Reports:
-┌────────────────────────────────────────────────────────────
-│ [1] 👥 Members with Unpaid Dues for Given Semester                                        
-│ [2] 🚫 Members with Highest Debt for a Given Semester                                    
-│ [3] 🕐 All Late Member Payments in a Given Semester                                     
-│ [4] 💸 Total Paid and Unpaid Fees as of Date                                   
-│ [0] ↩️  Back                                                
-└────────────────────────────────────────────────────────────""")
-
-# works
-def add_fee(conn):
+def add_fee(conn, organization_id):
     print("""┌────────────────────────────────────────────────────────────
 │                    ➕ Add New Fee                     """)
-    organization_id = input("Enter Organization ID: ")
     member_id = input("Enter Member ID: ")
     fee_name = input("Enter Fee Name: ")
     due_date = input("Enter Due Date (YYYY-MM-DD): ")
@@ -81,12 +69,11 @@ def add_fee(conn):
         print(f"\n❌ Error adding fee: {e}")
 
 # works
-def update_fee(conn):
+def update_fee(conn, organization_id):
     print("""┌────────────────────────────────────────────────────────────
 │                     ✏️  Update Fee                     """)
     fee_name = input("🔍 Enter Fee Name: ")
     member_id = input("Enter Member ID:")
-    organization_id = input("Enter Organization ID: ")
     semester = input("Enter Semester (1st/2nd) : ")
     academic_year = input("Enter Academic Year (XXXX-XXXX): ")
 
@@ -162,7 +149,7 @@ def update_fee(conn):
     except mariadb.Error as e:
         print(f"\n❌ Error updating fee: {e}")
 
-def delete_fee(conn):
+def delete_fee(conn, organization_id):
     while True:
         print("""┌────────────────────────────────────────────────────────────
 │ 🗑️  What would you like to delete?                     """)
@@ -179,7 +166,6 @@ def delete_fee(conn):
             print("""┌────────────────────────────────────────────────────────────
 │                    ➕ Delete Fee From Database                  """)
             fee_name = input("🔍 Enter Fee Name: ")
-            organization_id = input("Enter Organization ID: ")
             try:
                 cursor = conn.cursor()
                 
@@ -190,7 +176,7 @@ def delete_fee(conn):
                     (fee_name, organization_id)
                 )
                 fees = cursor.fetchall()
-                # thinking about displaying the fees pa
+
                 if fees:
                     print("\n📋 Fee Details")
                     print("┌──────────────┬────────────────┬──────────────────────┬────────────┬────────────────┬─────────┬──────────┬──────────┐")
@@ -232,7 +218,6 @@ def delete_fee(conn):
 │                    ➕ Delete Fee From Member               """)
             fee_name = input("🔍 Enter Fee Name: ")
             member_id = input("Enter Member ID: ")
-            organization_id = input("Enter Organization ID: ")
             semester = input("Enter Semester (1st/2nd): ")
             academic_year = input("Enter Academic Year (XXXX-XXXX): ")
             try:
@@ -281,11 +266,10 @@ def delete_fee(conn):
             except mariadb.Error as e:
                 print(f"\n❌ Error deleting fee: {e}")
 
-def generate_fin_status(conn):
+def generate_fin_status(conn, organization_id):
     print("""┌────────────────────────────────────────────────────────────
 │                    ➕ Generate Organization Financial Status               """)
     
-    organization_id = input("Enter Organization ID: ")
     semester = input("Enter Semester (1st/2nd) : ")
     academic_year = input("Enter Academic Year (XXXX-XXXX): ")
     
@@ -330,16 +314,22 @@ def generate_fin_status(conn):
     except mariadb.Error as e:
         print(f"\n❌ Error fetching financial status: {e}")
 
-def view_fee_reports(conn):
+def view_fee_reports(conn, organization_id):
     while True:
-        print_fee_report_menu()
+        print("""📋 View Fee Reports:
+┌────────────────────────────────────────────────────────────
+│ [1] 👥 Members with Unpaid Dues for Given Semester                                        
+│ [2] 🚫 Members with Highest Debt for a Given Semester                                    
+│ [3] 🕐 All Late Member Payments in a Given Semester                                     
+│ [4] 💸 Total Paid and Unpaid Fees as of Date                                   
+│ [0] ↩️  Back                                                
+└────────────────────────────────────────────────────────────""")
         
         choice = input("Enter your choice: ")
         if choice == "0":
             break
 
         elif choice == "1":
-            organization_id = input("Enter Organization ID: ")
             semester = input("Enter Semester (1st/2nd): ")
             academic_year = input("Enter Academic Year (XXXX-XXXX): ")
 
@@ -374,39 +364,12 @@ def view_fee_reports(conn):
 
             except mariadb.Error as e:
                 print(f"\n❌ Error fetching report: {e}")
-
+        # TODO: members with highest debt in semester
         elif choice == "2":
             member_id = input("Enter member id: ")
 
             try: 
                 cursor = conn.cursor()
-                cursor.execute(
-                    """CREATE OR REPLACE VIEW unpaid_fees_membervu(student_number, organization_id, fee_name, amount, due_date, academic_year, semester)
-                            AS SELECT f.`Student Number`, f.`Organization ID`, f.`Fee Name`, f.`Amount`, f.`Due Date`, f.`Academic Year`, f.`Semester`
-                            FROM fee f
-                            WHERE f.`Status` = 'Unpaid' OR f.`Status` = 'Pending'
-                            AND f.`Student Number` = ?""",
-                            (member_id,))
-
-                cursor.execute(
-                """SELECT * FROM unpaid_fees_membervu
-                    WHERE student_number = ?"""
-                , (member_id,))
-                results = cursor.fetchall() 
-
-                # working, wonky lang display
-                if results:
-                    print("\n📋 Unpaid Dues Across All Organizations")
-                    print("┌────────────┬──────────────┬─────────────────────┬──────────┬────────────┬───────────────┬───────────┐")
-                    print("│ Student #  │ Org ID       │ Fee Name            │ Amount   │ Due Date   │ Academic Year │ Semester  │")
-                    print("├────────────┼──────────────┼─────────────────────┼──────────┼────────────┼───────────────┼───────────┤")
-
-                    for row in results:
-                        print(f"│ {row[0]:<11} │ {row[1]:<12} │ {row[2]:<19} │ ₱{row[3]:<7} │ {str(row[4]):<10} │ {row[5]:<13} │ {row[6]:<9} │")
-
-                    print("└────────────┴──────────────┴─────────────────────┴──────────┴────────────┴───────────────┴───────────┘\n")
-                else:
-                    print("\nℹ️  No unpaid dues found for this member.\n")
 
             except mariadb.Error as e:
                 print(f"\n❌ Error fetching report: {e}")
@@ -504,37 +467,10 @@ def view_fee_reports(conn):
                     print("\nℹ️  No fees found for the given organization and date.\n")
             except mariadb.Error as e:
                 print(f"\n❌ Error fetching report: {e}")
-def view_all_fees(conn):
-    try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM fee ORDERY BY `Fee Name`")
-        fees = cursor.fetchall()
-        if fees:
-            print("\n📋 Fee Details")
-            print("┌──────────────┬────────────────┬──────────────────────┬────────────┬────────────────┬─────────┬──────────┬──────────┐")
-            print("│ Org ID       │ Student Number │ Fee Name             │ Due Date   │ Academic Year  │ Status  │ Semester │ Amount   │")
-            print("├──────────────┼────────────────┼──────────────────────┼────────────┼────────────────┼─────────┼──────────┼──────────┤")
 
-            for row in fees:
-                org_id = row[0]
-                student_number = row[1]
-                fee_name = row[2]
-                due_date = str(row[3])
-                academic_year = row[4]
-                status = row[5]
-                semester = row[6]
-                amount = float(row[7])  # Ensure it's a float for formatting
-
-                print(f"│ {org_id:<12} │ {student_number:<14} │ {fee_name:<20} │ {due_date:<10} │ {academic_year:<14} │ {status:<7} │ {semester:<8} │ ₱{amount:<7.2f} │")
-
-            print("└──────────────┴────────────────┴──────────────────────┴────────────┴────────────────┴─────────┴──────────┴──────────┘\n")
-    
-    except mariadb.Error as e:
-        print(f"\n❌ Error fetching fees: {e}")
-
-
-def main(conn):
+def main(conn, organization_id):
     while True:
+        #organization_id = organization_auth(conn)
         print_fee_header()
         print_fee_menu()
         choice = input("Enter your choice: ")
@@ -542,14 +478,30 @@ def main(conn):
         if choice == "0":
             break
         elif choice == "1":
-            add_fee(conn)
+            add_fee(conn, organization_id)
         elif choice == "2":
-            update_fee(conn)
+            update_fee(conn, organization_id)
         elif choice == "3":
-            delete_fee(conn)
+            delete_fee(conn, organization_id)
         elif choice == "4":
-            generate_fin_status(conn)
+            view_fee_reports(conn, organization_id)
         elif choice == "5":
-            view_fee_reports(conn)
-        elif choice == "6":
-            view_all_fees(conn)
+            generate_fin_status(conn, organization_id)
+
+
+if __name__ == "__main__": # Best practice for OOP in Python. When you import this file, it will not run automatically because __name__ will be the name of the file.
+                            # However, when you run this file directly via python main.py, __name__ will be "__main__" and the code below will run.
+    main()
+
+#     3. Manage Fees
+#         1. View Fee Reports
+#             1. Members with Unpaid Dues for Given Semester (Report #2)
+#             2. Late Payments in Given Semester (Report #6)
+#             3. Total Paid and Unpaid Fees as of Date (Report #9)
+#             4. View members with highest debt for a given semester (Report #10) 
+#         2. Add Payment
+#         3. Update Fee
+#         4. Generate Organization Financial Report
+#         5. Delete Fee 
+#             1. Delete Fee From member
+#             2. Delete Fee from database

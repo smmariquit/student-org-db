@@ -75,10 +75,49 @@ def print_interface_menu():
 │ [0] 🚪 Exit                                                
 └────────────────────────────────────────────────────────────""")
 
+def organization_auth(conn):
+    print("""┌────────────────────────────────────────────────────────────
+│                 👥 Organization Management                     """)
+    
+    organization_id = input("🎓 Enter Organization ID: ")
+    
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM organization WHERE `Organization ID` = ?", (organization_id,))
+        organization = cursor.fetchone()
+        if organization:
+            return organization[0]
+        else:
+            print(f"\n❌ Organization with ID {organization_id} not found!")
+            return None
+    except mariadb.Error as e:
+        print(f"\n❌ Error authenticating student: {e}")
+
+def student_auth(conn):
+    print("""┌────────────────────────────────────────────────────────────
+│                 👥 Student Management                     """)
+    
+    student_id = input("🎓 Enter Student ID: ")
+    
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM member WHERE `Student Number` = ?", (student_id,))
+        student = cursor.fetchone()
+        if student:
+            return student[0]
+        else:
+            print(f"\n❌ Student with ID {student_id} not found!")
+            return None
+    except mariadb.Error as e:
+        print(f"\n❌ Error authenticating student: {e}")
+
 def cli_main():
     while True:
         print_header()
         print_menu()
+        cursor = cursor.conn()
         
         try:
             choice = input("\n👉 Enter your choice: ")
@@ -88,9 +127,11 @@ def cli_main():
                 break
                 
             if choice == "1":
-                students.main(conn)
+                student_id = student_auth(conn)
+                students.main(conn, student_id)
             elif choice == "2":
-                organizations.main(conn)
+                organization_id = organization_auth(conn)
+                organizations.main(conn, organization_id)
             elif choice == "3":
                 admin.main(conn)
             else:
@@ -275,6 +316,7 @@ if __name__ == "__main__":
 #     -> Input: Organization ID
 #     1. Manage Members
 #         1. Add New member
+#             1. Add Member to Organization
 #         2. Renew membership
 #         3. Update member
 #             1. Update member role (org wide)
@@ -305,4 +347,5 @@ if __name__ == "__main__":
 #         5. Delete Fee 
 #             1. Delete Fee From member
 #             2. Delete Fee from database
+#         6. View All Fees
 #     4. Delete Organization

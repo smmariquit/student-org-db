@@ -13,8 +13,7 @@ def print_org_menu():
 ┌────────────────────────────────────────────────────────────
 │ [1] ➕ Manage Members                                   
 │ [2] ✏️  Manage Committees                                
-│ [3] 🗑️  Manage Fees                                
-│ [4] 👀 Delete Organization                                  
+│ [3] 🗑️  Manage Fees                                         
 │ [0] ↩️  Back                                                
 └────────────────────────────────────────────────────────────""")
 
@@ -29,7 +28,7 @@ def main(conn, organization_id):
         elif choice == "1":
             org_members.main(conn, organization_id)
         elif choice == "2":
-            print("wala pa")
+            org_committee.main(conn, organization_id)
         elif choice == "3":
             org_fees.main(conn, organization_id)
 

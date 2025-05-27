@@ -533,7 +533,45 @@ def view_org_members(conn, organization_id):
                             print("└────────────────────────────────────────────────────────────")
 
                     else:
-                        print(f"\nℹ️  No members with Degree Program '{member_degprog}' found in Organization {organization_id}.\n")
+                        print(f"\nℹ️  No members with batch '{member_batch}' found in Organization {organization_id}.\n")
+                elif choice == "6":
+                    member_committee = input("Enter member committee: ")
+
+                    cursor = conn.cursor()
+
+                    cursor.execute(
+                        """SELECT o.`Organization ID`,
+                        o.`Organization Name`,
+                        m.`Student Number`,
+                        m.`First Name`,
+                        m.`Last Name`,
+                        m.`Gender`,
+                        m.`Degree Program`,
+                        sr.`Committee Name`
+                        FROM student_role sr    
+                        JOIN organization o ON sr.`Organization ID` = o.`Organization ID`
+                        JOIN member m ON sr.`Student Number` = m.`Student Number`
+                        WHERE o.`Organization ID` = ? AND sr.`Committee Name` = ?""",    
+                        (organization_id, member_committee)
+                    )
+
+                    results = cursor.fetchall()
+
+                    if results:
+                        for row in results:
+                            print("┌────────────────────────────────────────────────────────────")
+                            print(f"│ 🏢 Organization ID: {row[0]}")
+                            print(f"│ 🏢 Organization Name: {row[1]}")
+                            print(f"│ 💰 Student Number: {row[2]}")
+                            print(f"│ 📅 First Name: {row[3]}")
+                            print(f"│ 📚 Last Name: {row[4]}")
+                            print(f"│ 🔃 Gender: {row[5]}")
+                            print(f"│ 🗓️ Degree Program: {row[6]}")
+                            print(f"│ 🗓️ Committee: {row[7]}")
+                            print(f"│ 🗓️ Academic Year: {row[8]}")
+                            print("└────────────────────────────────────────────────────────────")
+                    else:
+                        print(f"\nℹ️  No members found in committee '{member_committee}' for Organization {organization_id}.\n")
         elif choice == "3":
             member_role = input("Enter member role: ")
             
@@ -612,6 +650,8 @@ def view_org_members(conn, organization_id):
                     print("\n❌ No alumni members found.\n")
             except mariadb.Error as e:
                 print(f"\n❌ Error fetching data: {e}")
+        elif choice == "0":
+            break
 
 def main(conn, organization_id):
     while True:

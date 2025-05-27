@@ -61,7 +61,12 @@ INSERT INTO member(`Student Number`, `First Name`, `Middle Name`, `Last Name`, `
 ('20230002', 'Barkley', NULL, 'Howlson', 'Male', 'BS Computer Science'),
 ('20230003', 'Otto', 'J.', 'Riverpaw', 'Male', 'BS Environmental Science'),
 ('20230004', 'Gerry', 'K.', 'Neckson', 'Nonbinary', 'BS Architecture'),
-('20230005', 'Tina', 'M.', 'Shellford', 'Female', 'BS Marine Biology');
+('20230005', 'Tina', 'M.', 'Shellford', 'Female', 'BS Marine Biology'),
+('20230006', 'John', 'D.', 'Doe', 'Male', 'BS Computer Science'),
+('20230007', 'Jane', 'E.', 'Smith', 'Female', 'BS Biology'),
+('20230008', 'Michael', 'F.', 'Johnson', 'Male', 'BS Applied Physics'),
+('20230009', 'Emily', 'G.', 'Williams', 'Female', 'BS Chemistry'),
+('20230010', 'Daniel', 'H.', 'Brown', 'Male', 'BS Mathematics');
 
 CREATE TABLE joins (
     `Student Number` varchar(128) NOT NULL ,
@@ -71,6 +76,7 @@ CREATE TABLE joins (
     `Member Role` varchar(128) NOT NULL,
     `Member Status` varchar(128) NOT NULL,
     CONSTRAINT PK_Joins PRIMARY KEY (`Student Number`, `Organization ID`, `Academic Year`, `Semester`),
+    CONSTRAINT UQ_SN UNIQUE (`Student Number`) -- wait what if hindi nag eexist yung S/N sa Member table? wala bang constraint for that? why wouldnt it exist there lahat naman ng member may std no
 );
 
 INSERT INTO joins(`Student Number`, `Organization ID`, `Academic Year`, `Semester`, `Member Role`, `Member Status`) VALUES
@@ -78,7 +84,27 @@ INSERT INTO joins(`Student Number`, `Organization ID`, `Academic Year`, `Semeste
 ('20230002', 22222222, '2024-2025', '1st', 'Treasurer', 'Active'),
 ('20230003', 33333333, '2024-2025', '2nd', 'Member', 'Inactive'),
 ('20230004', 44444444, '2024-2025', '1st', 'Secretary', 'Active'),
-('20230005', 55555555, '2024-2025', '1st', 'Member', 'Probation');
+('20230005', 55555555, '2024-2025', '1st', 'Member', 'Probation'),
+('20230006', 11111111, '2024-2025', '1st', 'Member', 'Active'),
+('20230007', 11111111, '2023-2024', '1st', 'Secretary', 'Inactive'),
+('20230008', 11111111, '2023-2024', '1st', 'Internals', 'Alumni'),
+('20230009', 11111111, '2023-2024', '2nd', 'Externals', 'Active'),
+('20230010', 11111111, '2023-2024', '2nd', 'Member', 'Active'),
+('20230011', 11111111, '2023-2024', '1st', 'Member', 'Active'),  
+('20230011', 11111111, '2023-2024', '2nd', 'Member', 'Alumni'),  
+('20230011', 11111111, '2022-2023', '1st', 'Member', 'Active'),  
+('20230011', 11111111, '2022-2023', '2nd', 'Member', 'Active'),  
+('20230011', 11111111, '2021-2022', '1st', 'Member', 'Active'),  
+('20230011', 11111111, '2021-2022', '2nd', 'Member', 'Active'),  
+('20230011', 11111111, '2020-2021', '1st', 'Member', 'Active'),  
+('20230011', 11111111, '2020-2021', '2nd', 'Member', 'Active'),  
+('20230011', 11111111, '2019-2020', '1st', 'Member', 'Active'),  
+('20230011', 11111111, '2019-2020', '2nd', 'Member', 'Active'),   
+('20230012', 11111111, '2018-2019', '1st', 'Escort', 'Inactive'),  
+('20230012', 11111111, '2018-2019', '2nd', 'Escort', 'Inactive'),  
+('20230012', 11111111, '2018-2019', '1st', 'Muse', 'Inactive'),  
+('20230012', 11111111, '2018-2019', '2nd', 'Muse', 'Inactive'),  
+
 
 CREATE TABLE member_batch (
     `Student Number` varchar(128) NOT NULL,
@@ -92,7 +118,14 @@ INSERT INTO member_batch(`Student Number`, `Organization ID`, `Batch`) VALUES
 ('20230002', 22222222, 2022),
 ('20230003', 33333333, 2021),
 ('20230004', 44444444, 2023),
-('20230005', 55555555, 2024);
+('20230005', 55555555, 2024),
+('20230006', 11111111, 2024),
+('20230007', 11111111, 2018),
+('20230008', 11111111, 2018),
+('20230009', 11111111, 2018),
+('20230010', 11111111, 2016),
+('20230011', 11111111, 2024),
+('20230012', 11111111, 2018);
 
 CREATE TABLE student_role(
     `Student Number` varchar(128) NOT NULL, 
@@ -107,6 +140,13 @@ INSERT INTO student_role(`Student Number`, `Organization ID`, `Committee Name`, 
 ('20230002', 22222222, 'Fundraising Ferrets', 'Finance Head'),
 ('20230003', 33333333, 'Otter Awareness', 'Public Relations'),
 ('20230004', 44444444, 'Tall Talks', 'Moderator'),
+('20230006', 11111111, 'Executive', 'President'),
+('20230007', 11111111, 'Executive', 'Vice President'),
+('20230008', 11111111, 'Executive', 'Secretary'),
+('20230009', 11111111, 'Executive', 'Treasurer'),
+('20230010', 11111111, 'Executive', 'Auditor'),
+('20230011', 11111111, 'Executive', 'P.R.O.'),
+('20230012', 11111111, 'Executive', 'Sgt. At Arms'),
 ('20230005', 55555555, 'Shell Squad', 'Logistics');
 
 CREATE TABLE committee (
@@ -122,7 +162,8 @@ INSERT INTO committee(`Committee Name`, `Organization ID`, `Semester`, `Academic
 ('Fundraising Ferrets', 22222222, '1st', '2024-2025'),
 ('Otter Awareness', 33333333, '2nd', '2024-2025'),
 ('Tall Talks', 44444444, '1st', '2024-2025'),
-('Shell Squad', 55555555, '1st', '2024-2025');
+('Shell Squad', 55555555, '1st', '2024-2025'),
+('Executive', 11111111, '1st', '2024-2025');
 
 CREATE TABLE committee_role (
     `Committee Name` varchar(128) NOT NULL,
@@ -172,6 +213,15 @@ INSERT INTO payment(`Fee Name`, `Student Number`, `Organization ID`, `Full Payme
 ('Event Fee', '20230002', 22222222, '2024-09-10', '2024-09-15', FALSE),
 ('Otter Field Trip', '20230003', 33333333, '2025-01-15', '2025-01-10', TRUE),
 ('Poster Printing', '20230004', 44444444, '2024-11-04', '2024-11-05', FALSE),
+('Annual Dues', '20230005', 55555555, '2024-12-10', '2024-12-12', FALSE),
+('Turtle Shell Care', '20230005', 55555555, '2024-12-10', '2024-12-12', FALSE),
+('Annual Dues', '20230006', 11111111, '2024-10-02', '2024-10-01', TRUE),
+('Event Fee', '20230007', 11111111, '2024-09-10', '2024-09-15', FALSE),
+('Annual Dues', '20230008', 11111111, '2024-10-02', '2024-10-01', TRUE),
+('Event Fee', '20230009', 11111111, '2024-09-10', '2024-09-15', FALSE),
+('Annual Dues', '20230010', 11111111, '2024-10-02', '2024-10-01', TRUE),
+('Event Fee', '20230011', 11111111, '2024-09-10', '2024-09-15', FALSE),
+('Annual Dues', '20230012', 11111111, '2024-10-02', '2024-10-01', TRUE),
 ('Turtle Shell Care', '20230005', 55555555, '2024-12-10', '2024-12-12', FALSE);
 
 

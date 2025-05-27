@@ -273,44 +273,6 @@ def update_student(conn):
     except mariadb.Error as e:
         print(f"\n❌ Error updating student: {e}")
 
-def delete_student(conn):
-    print("""┌────────────────────────────────────────────────────────────
-│                     🗑️  Delete Student                     """)
-    student_id = input("🔍 Enter Student ID to delete: ")
-    
-    try:
-        cursor = conn.cursor()
-        
-        # Get student info before it gets deleted
-        cursor.execute(
-            "SELECT student_id, name FROM students WHERE student_id = ?",
-            (student_id,)
-        )
-        student = cursor.fetchone()
-        
-        if student:
-            print("\n⚠️  Student Information to be deleted:")
-            print("┌────────────────────────────────────────────────────────────")
-            print(f"│ 🎓 ID: {student[0]}")
-            print(f"│ 👤 Name: {student[1]} {student[2] + ' ' if student[2] else ''}{student[3]}") # If no middle name, it will not print anything.
-            print(f"│ 👥 Gender: {student[4]}")
-            print(f"│ 📚 Degree Program: {student[5]}")
-            print("└────────────────────────────────────────────────────────────")
-            
-            confirm = input("\n⚠️  Are you sure you want to delete this student? (Y/N): ").upper()
-            if confirm == "Y":
-                cursor.execute(
-                    "DELETE FROM students WHERE student_id = ?",
-                    (student_id,)
-                )
-                conn.commit()
-                print("✅ Student successfully deleted from database!")
-        else:
-            print(f"\n❌ Student with ID {student_id} not found!")
-            
-    except mariadb.Error as e:
-        print(f"\n❌ Error deleting student: {e}")
-
 def view_students(conn):
     while True:
         print("""┌────────────────────────────────────────────────────────────

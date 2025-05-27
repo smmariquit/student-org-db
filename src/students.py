@@ -87,36 +87,109 @@ def view_committees(conn, student_id):
         print("\n📋 You are not a member of any committees.")
 
 def view_fees(conn, student_id):
-    print("""┌────────────────────────────────────────────────────────────
-│                    💰 View Fees                     """)
-    try:
-        cursor = conn.cursor()
-        
-        cursor.execute("""
-            SELECT f.*, o.`Organization Name` 
-            FROM fee f 
-            JOIN organization o ON f.`Organization ID` = o.`Organization ID`
-            WHERE f.`Student Number` = ?
-            ORDER BY f.`Due Date` DESC
-        """, (student_id,))
-        fees = cursor.fetchall()
-    except mariadb.Error as e:
-        print(f"\n❌ Error viewing fees: {e}")
-    
-    if fees:
-        print("\n📋 Fees:")
-        for fee in fees:
-            print("┌────────────────────────────────────────────────────────────")
-            print(f"│ 🏢 Organization: {fee[8]}")
-            print(f"│ 💰 Fee Name: {fee[2]}")
-            print(f"│ 📅 Due Date: {fee[3]}")
-            print(f"│ 📚 Academic Year: {fee[4]}")
-            print(f"│ 🔃 Status: {fee[5]}")
-            print(f"│ 🗓️ Semester: {fee[6]}")
-            print(f"│ 💳 Amount: ₱{float(fee[7]):.2f}")
-            print("└────────────────────────────────────────────────────────────")
-    else:
-        print("\n📋 No fees found.")
+    while True:
+        print("""┌────────────────────────────────────────────────────────────
+    │                    💰 View Fees                     """)
+        print("""📋 View Fees Menu:
+        ┌────────────────────────────────────────────────────────────
+        │ [1] View Unpaid Dues Across All Orgs
+        │ [2] View Fees Past Due
+        │ [3] View All Fees
+        │ [0] ↩️  Back                                                
+        └────────────────────────────────────────────────────────────""")
+        choice = input("Enter your choice: ")
+        if choice == "0":
+            break
+        elif choice == "1":
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """CREATE OR REPLACE VIEW unpaid_fees_membervu(student_number, organization_id, fee_name, amount, due_date, academic_year, semester)
+                            AS SELECT f.`Student Number`, f.`Organization ID`, f.`Fee Name`, f.`Amount`, f.`Due Date`, f.`Academic Year`, f.`Semester`
+                            FROM fee f
+                            WHERE f.`Status` = 'Unpaid' OR f.`Status` = 'Pending'
+                            AND f.`Student Number` = ?""",
+                            (student_id,))
+
+                cursor.execute(
+                """SELECT * FROM unpaid_fees_membervu
+                    WHERE student_number = ?"""
+                , (student_id,))
+                results = cursor.fetchall() 
+
+                # working, wonky lang display
+                if results:
+                    print("\n📋 Unpaid Dues Across All Organizations")
+                    print("┌────────────┬──────────────┬─────────────────────┬──────────┬────────────┬───────────────┬───────────┐")
+                    print("│ Student #  │ Org ID       │ Fee Name            │ Amount   │ Due Date   │ Academic Year │ Semester  │")
+                    print("├────────────┼──────────────┼─────────────────────┼──────────┼────────────┼───────────────┼───────────┤")
+
+                    for row in results:
+                        print(f"│ {row[0]:<11} │ {row[1]:<12} │ {row[2]:<19} │ ₱{row[3]:<7} │ {str(row[4]):<10} │ {row[5]:<13} │ {row[6]:<9} │")
+
+                    print("└────────────┴──────────────┴─────────────────────┴──────────┴────────────┴───────────────┴───────────┘\n")
+                else:
+                    print("\nℹ️  No unpaid dues found for this member.\n")
+
+            except mariadb.Error as e:
+                print(f"\n❌ Error fetching report: {e}")
+
+        elif choice == "2":
+            try:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """SELECT * FROM fee WHERE `Student Number` = ?
+                    AND `Status` != 'Paid'
+                    AND `Due Date` < CURDATE()""",
+                    (student_id,)
+                )
+                results = cursor.fetchall()
+
+                if results:
+                    print("\n📋 Fees Past Due Across All Organizations")
+                    print("┌──────────────────┬────────────────┬──────────────────────┬────────────┬────────────────┬────────────┬──────────┐")
+                    print("│ Organization ID  │ Student Number │ Fee Name             │ Due Date   │ Academic Year  │ Semester   │ Amount   │")
+                    print("├──────────────────┼────────────────┼──────────────────────┼────────────┼────────────────┼────────────┼──────────┤")
+
+                    for row in results:
+                        print(f"│ {row[0]:<16} │ {row[1]:<14} │ {row[2]:<20} │ {row[3]:<10} │ {row[4]:<14} │ {row[6]:<10} │ ₱{row[7]:<7} │")
+
+                    print("└──────────────────┴────────────────┴──────────────────────┴────────────┴────────────────┴────────────┴──────────┘\n")
+                else:
+                    print("\nℹ️  No unpaid feed past their due date found for this member.\n")
+
+            except mariadb.Error as e:
+                print(f"\n❌ Error fetching report: {e}")
+                    
+        elif choice == "3":
+            try:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT f.*, o.`Organization Name` 
+                    FROM fee f 
+                    JOIN organization o ON f.`Organization ID` = o.`Organization ID`
+                    WHERE f.`Student Number` = ?
+                    ORDER BY f.`Due Date` DESC
+                """, (student_id,))
+                fees = cursor.fetchall()
+            except mariadb.Error as e:
+                print(f"\n❌ Error viewing fees: {e}")
+            
+            if fees:
+                print("\n📋 Fees:")
+                for fee in fees:
+                    print("┌────────────────────────────────────────────────────────────")
+                    print(f"│ 🏢 Organization: {fee[8]}")
+                    print(f"│ 💰 Fee Name: {fee[2]}")
+                    print(f"│ 📅 Due Date: {fee[3]}")
+                    print(f"│ 📚 Academic Year: {fee[4]}")
+                    print(f"│ 🔃 Status: {fee[5]}")
+                    print(f"│ 🗓️ Semester: {fee[6]}")
+                    print(f"│ 💳 Amount: ₱{float(fee[7]):.2f}")
+                    print("└────────────────────────────────────────────────────────────")
+            else:
+                print("\n📋 No fees found.")
 
 # def add_student(conn):
 #     print("""┌────────────────────────────────────────────────────────────
@@ -199,44 +272,6 @@ def update_student(conn):
             
     except mariadb.Error as e:
         print(f"\n❌ Error updating student: {e}")
-
-def delete_student(conn):
-    print("""┌────────────────────────────────────────────────────────────
-│                     🗑️  Delete Student                     """)
-    student_id = input("🔍 Enter Student ID to delete: ")
-    
-    try:
-        cursor = conn.cursor()
-        
-        # Get student info before it gets deleted
-        cursor.execute(
-            "SELECT student_id, name FROM students WHERE student_id = ?",
-            (student_id,)
-        )
-        student = cursor.fetchone()
-        
-        if student:
-            print("\n⚠️  Student Information to be deleted:")
-            print("┌────────────────────────────────────────────────────────────")
-            print(f"│ 🎓 ID: {student[0]}")
-            print(f"│ 👤 Name: {student[1]} {student[2] + ' ' if student[2] else ''}{student[3]}") # If no middle name, it will not print anything.
-            print(f"│ 👥 Gender: {student[4]}")
-            print(f"│ 📚 Degree Program: {student[5]}")
-            print("└────────────────────────────────────────────────────────────")
-            
-            confirm = input("\n⚠️  Are you sure you want to delete this student? (Y/N): ").upper()
-            if confirm == "Y":
-                cursor.execute(
-                    "DELETE FROM students WHERE student_id = ?",
-                    (student_id,)
-                )
-                conn.commit()
-                print("✅ Student successfully deleted from database!")
-        else:
-            print(f"\n❌ Student with ID {student_id} not found!")
-            
-    except mariadb.Error as e:
-        print(f"\n❌ Error deleting student: {e}")
 
 def view_students(conn):
     while True:

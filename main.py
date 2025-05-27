@@ -19,7 +19,7 @@
 import mariadb # Import the official MariaDB connector for Python
 import os # Import the OS module to read environment variables, which is necessary for the security of the database connection.
 from dotenv import load_dotenv
-from src import students, organizations, membership, fees
+from src import admin, students, organizations
 from src import gui
 from data import models, queries
 
@@ -59,13 +59,11 @@ def print_header():
 
 def print_menu():
     print("""┌────────────────────────────────────────────────────────────
-│ 📋 Main Menu:
+│ 📋 Log In:
 ├────────────────────────────────────────────────────────────
-│ [1] 👥 Manage Students                                     
-│ [2] 🏢 Manage Organizations                                
-│ [3] 🤝 Manage Memberships                                  
-│ [4] 💰 Manage Fees                                         
-│ [0] 🚪 Exit                                                
+│ [1] 👥 Student                               
+│ [2] 🏢 Organization                                 
+│ [3] 🤝 Admin                                                                                 
 └────────────────────────────────────────────────────────────""")
 
 def print_interface_menu():
@@ -94,9 +92,7 @@ def cli_main():
             elif choice == "2":
                 organizations.main(conn)
             elif choice == "3":
-                membership.main(conn)
-            elif choice == "4":
-                fees.main(conn)
+                admin.main(conn)
             else:
                 print("❌ Invalid choice! Please try again.")
                 

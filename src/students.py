@@ -1,5 +1,27 @@
 import mariadb
 
+student_id = None
+
+def student_auth(conn):
+    print("""┌────────────────────────────────────────────────────────────
+│                 👥 Student Management                     """)
+    
+    student_id = input("🎓 Enter Student ID: ")
+    
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM member WHERE `Student Number` = ?", (student_id,))
+        student = cursor.fetchone()
+        if student:
+            return student[0]
+        else:
+            print(f"\n❌ Student with ID {student_id} not found!")
+            return None
+    except mariadb.Error as e:
+        print(f"\n❌ Error authenticating student: {e}")
+        
+
 def print_student_header():
     print("""┌────────────────────────────────────────────────────────────
 │                 👥 Student Management                     """)
@@ -7,46 +29,128 @@ def print_student_header():
 def print_student_menu():
     print("""📋 Student Menu:
 ┌────────────────────────────────────────────────────────────
-│ [1] ➕ Add Student                                        
-│ [2] ✏️  Update Student                                     
-│ [3] 🗑️  Delete Student                                     
-│ [4] 👀 View Students                                      
+│ [1] View Organizations
+│ [2] View Committees
+│ [3] View Fees
 │ [0] ↩️  Back                                                
 └────────────────────────────────────────────────────────────""")
 
-def add_student(conn):
+def view_organizations(conn, student_id):
     print("""┌────────────────────────────────────────────────────────────
-│                    ➕ Add New Student                     """)
-    student_id = input("🎓 Enter Student ID: ")
-    first_name = input("👤 Enter First Name: ")
-    middle_name = input("👤 Enter Middle Name (press Enter if none): ")
-    last_name = input("👤 Enter Last Name: ")
-    gender = input("👥 Enter Gender: ")
-    degree_program = input("📚 Enter Degree Program: ")
-    
+│                    ➕ View Organizations                     """)
+         
     try:
         cursor = conn.cursor()
         
-        # Insert the new student into member table
-        cursor.execute(
-            """INSERT INTO member 
-               (`Student Number`, `First Name`, `Middle Name`, `Last Name`, `Gender`, `Degree Program`) 
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (student_id, first_name, middle_name or None, last_name, gender, degree_program) # If middle name is empty, it will be Falsy. Since it's OR'd to None, it will only not be None if middle_name is not empty. https://www.freecodecamp.org/news/truthy-and-falsy-values-in-python/
-        )
-        conn.commit() # In mariadb-python, this saves data. This is different from MariaDB commits.
-        
-        print("\n📝 Student Information to be added:")
-        print("┌────────────────────────────────────────────────────────────")
-        print(f"│ 🎓 ID: {student_id}")
-        print(f"│ 👤 Name: {first_name} {middle_name + ' ' if middle_name else ''}{last_name}") # If no middle name, it will not print anything.
-        print(f"│ 👥 Gender: {gender}")
-        print(f"│ 📚 Degree Program: {degree_program}")
-        print("└────────────────────────────────────────────────────────────")
-        print("\n✅ Student successfully added to database!")
-        
+        cursor.execute("SELECT * FROM organization JOIN joins ON organization.`Organization ID` = joins.`Organization ID` JOIN member ON member.`Student Number` = joins.`Student Number` WHERE member.`Student Number` = ?", (student_id,))
+        organizations = cursor.fetchall()
     except mariadb.Error as e:
-        print(f"\n❌ Error adding student: {e}")
+        print(f"\n❌ Error viewing organizations: {e}")
+
+    if organizations:
+        print("\n📋 Organizations:")
+        for organization in organizations:
+            print(f"│ 🔢 ID: {organization[0]}")
+            print(f"│ 🏢 Name: {organization[1]}")
+            print("└────────────────────────────────────────────────────────────")
+    else:
+        print("\n📋 No organizations found.")
+
+def view_committees(conn, student_id):
+    print("""┌────────────────────────────────────────────────────────────
+│                    👥 View Committees                     """)
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT DISTINCT c.`Committee Name`, c.`Organization ID`, o.`Organization Name`, sr.`Role`
+            FROM student_role sr
+            JOIN committee c ON sr.`Committee Name` = c.`Committee Name` 
+                AND sr.`Organization ID` = c.`Organization ID`
+            JOIN organization o ON c.`Organization ID` = o.`Organization ID`
+            WHERE sr.`Student Number` = ?
+            ORDER BY c.`Committee Name`
+        """, (student_id,))
+        committees = cursor.fetchall()
+    except mariadb.Error as e:
+        print(f"\n❌ Error viewing committees: {e}")
+
+    if committees:
+        print("\n📋 Your Committees:")
+        for committee in committees:
+            print("┌────────────────────────────────────────────────────────────")
+            print(f"│ 🏢 Committee: {committee[0]}")
+            print(f"│ 🏛️ Organization: {committee[2]}")
+            print(f"│ 👤 Your Role: {committee[3]}")
+            print("└────────────────────────────────────────────────────────────")
+    else:
+        print("\n📋 You are not a member of any committees.")
+
+def view_fees(conn, student_id):
+    print("""┌────────────────────────────────────────────────────────────
+│                    💰 View Fees                     """)
+    try:
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT f.*, o.`Organization Name` 
+            FROM fee f 
+            JOIN organization o ON f.`Organization ID` = o.`Organization ID`
+            WHERE f.`Student Number` = ?
+            ORDER BY f.`Due Date` DESC
+        """, (student_id,))
+        fees = cursor.fetchall()
+    except mariadb.Error as e:
+        print(f"\n❌ Error viewing fees: {e}")
+    
+    if fees:
+        print("\n📋 Fees:")
+        for fee in fees:
+            print("┌────────────────────────────────────────────────────────────")
+            print(f"│ 🏢 Organization: {fee[8]}")
+            print(f"│ 💰 Fee Name: {fee[2]}")
+            print(f"│ 📅 Due Date: {fee[3]}")
+            print(f"│ 📚 Academic Year: {fee[4]}")
+            print(f"│ 🔃 Status: {fee[5]}")
+            print(f"│ 🗓️ Semester: {fee[6]}")
+            print(f"│ 💳 Amount: ₱{float(fee[7]):.2f}")
+            print("└────────────────────────────────────────────────────────────")
+    else:
+        print("\n📋 No fees found.")
+
+# def add_student(conn):
+#     print("""┌────────────────────────────────────────────────────────────
+# │                    ➕ Add New Student                     """)
+#     student_id = input("🎓 Enter Student ID: ")
+#     first_name = input("👤 Enter First Name: ")
+#     middle_name = input("👤 Enter Middle Name (press Enter if none): ")
+#     last_name = input("👤 Enter Last Name: ")
+#     gender = input("👥 Enter Gender: ")
+#     degree_program = input("📚 Enter Degree Program: ")
+    
+#     try:
+#         cursor = conn.cursor()
+        
+#         # Insert the new student into member table
+#         cursor.execute(
+#             """INSERT INTO member 
+#                (`Student Number`, `First Name`, `Middle Name`, `Last Name`, `Gender`, `Degree Program`) 
+#                VALUES (?, ?, ?, ?, ?, ?)""",
+#             (student_id, first_name, middle_name or None, last_name, gender, degree_program) # If middle name is empty, it will be Falsy. Since it's OR'd to None, it will only not be None if middle_name is not empty. https://www.freecodecamp.org/news/truthy-and-falsy-values-in-python/
+#         )
+#         conn.commit() # In mariadb-python, this saves data. This is different from MariaDB commits.
+        
+#         print("\n📝 Student Information to be added:")
+#         print("┌────────────────────────────────────────────────────────────")
+#         print(f"│ 🎓 ID: {student_id}")
+#         print(f"│ 👤 Name: {first_name} {middle_name + ' ' if middle_name else ''}{last_name}") # If no middle name, it will not print anything.
+#         print(f"│ 👥 Gender: {gender}")
+#         print(f"│ 📚 Degree Program: {degree_program}")
+#         print("└────────────────────────────────────────────────────────────")
+#         print("\n✅ Student successfully added to database!")
+        
+#     except mariadb.Error as e:
+#         print(f"\n❌ Error adding student: {e}")
 
 def update_student(conn):
     print("""┌────────────────────────────────────────────────────────────
@@ -193,6 +297,7 @@ def view_students(conn):
 
 def main(conn):
     while True:
+        student_id = student_auth(conn)
         print_student_header()
         print_student_menu()
         choice = input("Enter your choice: ")
@@ -200,13 +305,11 @@ def main(conn):
         if choice == "0":
             break
         elif choice == "1":
-            add_student(conn)
+            view_organizations(conn, student_id)
         elif choice == "2":
-            update_student(conn)
+            view_committees(conn, student_id)
         elif choice == "3":
-            delete_student(conn)
-        elif choice == "4":
-            view_students(conn)
+            view_fees(conn, student_id)
 
 if __name__ == "__main__": # Best practice for OOP in Python. When you import this file, it will not run automatically because __name__ will be the name of the file.
                             # However, when you run this file directly via python main.py, __name__ will be "__main__" and the code below will run.

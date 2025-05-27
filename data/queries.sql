@@ -71,7 +71,6 @@ CREATE TABLE joins (
     `Member Role` varchar(128) NOT NULL,
     `Member Status` varchar(128) NOT NULL,
     CONSTRAINT PK_Joins PRIMARY KEY (`Student Number`, `Organization ID`, `Academic Year`, `Semester`),
-    CONSTRAINT UQ_SN UNIQUE (`Student Number`) -- wait what if hindi nag eexist yung S/N sa Member table? wala bang constraint for that? why wouldnt it exist there lahat naman ng member may std no
 );
 
 INSERT INTO joins(`Student Number`, `Organization ID`, `Academic Year`, `Semester`, `Member Role`, `Member Status`) VALUES

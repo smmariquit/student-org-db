@@ -113,11 +113,10 @@ def student_auth(conn):
     except mariadb.Error as e:
         print(f"\n❌ Error authenticating student: {e}")
 
-def cli_main():
+def main():
     while True:
         print_header()
         print_menu()
-        cursor = cursor.conn()
         
         try:
             choice = input("\n👉 Enter your choice: ")
@@ -128,10 +127,12 @@ def cli_main():
                 
             if choice == "1":
                 student_id = student_auth(conn)
-                students.main(conn, student_id)
+                if student_id != None:
+                    students.main(conn, student_id)
             elif choice == "2":
                 organization_id = organization_auth(conn)
-                organizations.main(conn, organization_id)
+                if organization_id != None:
+                    organizations.main(conn, organization_id)
             elif choice == "3":
                 admin.main(conn)
             else:
@@ -142,29 +143,29 @@ def cli_main():
         except Exception as e:
             print(f"❌ An error occurred: {e}")
 
-def main():
-    while True:
-        print_header()
-        print_interface_menu()
+# def main():
+#     while True:
+#         print_header()
+#         print_interface_menu()
         
-        try:
-            choice = input("\n👉 Enter your choice: ")
+#         try:
+#             choice = input("\n👉 Enter your choice: ")
             
-            if choice == "0":
-                print("\n👋 Thank you for using the Student Organization Database!")
-                break
+#             if choice == "0":
+#                 print("\n👋 Thank you for using the Student Organization Database!")
+#                 break
                 
-            if choice == "1":
-                cli_main()
-            elif choice == "2":
-                gui.main()
-            else:
-                print("❌ Invalid choice! Please try again.")
+#             if choice == "1":
+#                 cli_main()
+#             elif choice == "2":
+#                 gui.main()
+#             else:
+#                 print("❌ Invalid choice! Please try again.")
                 
-        except ValueError:
-            print("❌ Please enter a valid number!")
-        except Exception as e:
-            print(f"❌ An error occurred: {e}")
+#         except ValueError:
+#             print("❌ Please enter a valid number!")
+#         except Exception as e:
+#             print(f"❌ An error occurred: {e}")
 
 if __name__ == "__main__":
     try:
@@ -333,8 +334,9 @@ if __name__ == "__main__":
 #         2. Update Committee
 #         3. Delete Committee
 #         4. Add Committee member (this alters student_role)
-#         5. Update member role
-#         6. View members per committee (Report #4 pag executive ang input           
+#         5. Remove Committee member
+#         6. Update member role
+#         7. View members per committee (Report #4 pag executive ang input           
 #     3. Manage Fees
 #         1. View Fee Reports
 #             1. Members with Unpaid Dues for Given Semester (Report #2)

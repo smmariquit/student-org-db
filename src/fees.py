@@ -5,7 +5,8 @@ def print_fee_header():
 │                 👥 Fee Management                     """)
 
 def print_fee_menu():
-    print("""┌────────────────────────────────────────────────────────────
+    print(""" 📋 Fee Menu:
+┌────────────────────────────────────────────────────────────
 │ [1] ➕ Add Fee                                        
 │ [2] ✏️  Update Fee                                     
 │ [3] 🗑️  Delete Fee                                     
@@ -506,7 +507,7 @@ def view_fee_reports(conn):
 def view_all_fees(conn):
     try:
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM fee")
+        cursor.execute("SELECT * FROM fee ORDERY BY `Fee Name`")
         fees = cursor.fetchall()
         if fees:
             print("\n📋 Fee Details")

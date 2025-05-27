@@ -38,8 +38,8 @@ def add_member(conn, organization_id):
             `Organization ID`,
             `Academic Year`,
             `Semester`,
-            `Role`,
-            `Status`)
+            `Member Role`,
+            `Member Status`)
             VALUES (?, ?, ?, ?, ?, ?)""",
         (student_id, organization_id, acad_year, semester, role, status))
         conn.commit()
@@ -64,7 +64,7 @@ def add_member(conn, organization_id):
             conn.commit()
 
             cursor.execute(
-                """SELECT * FROM member_batch WHERE `Student ID` = ? 
+                """SELECT * FROM member_batch WHERE `Student Number` = ? 
                     AND `Organization ID` = ?""",
                 (student_id, organization_id)
             )
@@ -115,10 +115,8 @@ def update_membership(conn, organization_id):
         cursor.execute(
             """SELECT * FROM joins WHERE
                 `Student Number` = ? 
-                AND `Organization ID` = ? 
-                AND `Semester` = ? 
-                AND `Academic Year` = ?""",
-            (member_id, organization_id, semester, academic_year)
+                AND `Organization ID` = ?""",
+            (member_id, organization_id)
         )
         student = cursor.fetchone() # check if existing
 
@@ -130,8 +128,8 @@ def update_membership(conn, organization_id):
                     `Organization ID`,
                     `Academic Year`,
                     `Semester`,
-                    `Role`,
-                    `Status`)
+                    `Member Role`,
+                    `Member Status`)
                     VALUES (?, ?, ?, ?, ?, ?)""",
                 (member_id, organization_id, academic_year, semester, member_role, member_status))
                 conn.commit()
@@ -158,10 +156,8 @@ def update_org_member(conn, organization_id):
         cursor.execute(
             """SELECT * FROM joins WHERE
                 `Student Number` = ? 
-                AND `Organization ID` = ? 
-                AND `Semester` = ? 
-                AND `Academic Year` = ?""",
-            (member_id, organization_id, semester, academic_year)
+                AND `Organization ID` = ?""",
+            (member_id, organization_id)
         )
 
         member = cursor.fetchone()
@@ -222,67 +218,54 @@ def update_org_member(conn, organization_id):
         print(f"\n❌ Error updating fee: {e}")
 
 def remove_org_member(conn, organization_id):
-    while True:
-        print("""📋 Remove Member Menu:
-    ┌────────────────────────────────────────────────────────────
-    │ [1] 👥 Remove Member from Organization                                    
-    │ [2] 🚫 Remove Member from Committee                                                                   
-    │ [0] ↩️  Back                                                
-    └────────────────────────────────────────────────────────────""")
-        choice = input("Enter your choice: ")
-        if choice == "0":
-            break
-        elif choice == "1":
-            # as if member never existed sa org
-            print("""┌────────────────────────────────────────────────────────────
-        │                     🗑️  Delete Student                     """)
-            student_id = input("🔍 Enter Student ID to delete: ")
+    # as if member never existed sa org
+    print("""┌────────────────────────────────────────────────────────────
+│                     🗑️  Delete Student                     """)
+    student_id = input("🔍 Enter Student ID to delete: ")
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Get student info before it gets deleted
+        cursor.execute(
+            "SELECT * FROM member WHERE `Student Number` = ?",
+            (student_id,)
+        )
+        student = cursor.fetchone()
+        
+        if student:
+            print("\n⚠️  Student Information to be deleted:")
+            print("┌────────────────────────────────────────────────────────────")
+            print(f"│ 🎓 ID: {student[0]}")
+            print(f"│ 👤 Name: {student[1]} {student[2] + ' ' if student[2] else ''}{student[3]}") # If no middle name, it will not print anything.
+            print(f"│ 👥 Gender: {student[4]}")
+            print(f"│ 📚 Degree Program: {student[5]}")
+            print("└────────────────────────────────────────────────────────────")
             
-            try:
-                cursor = conn.cursor()
+            confirm = input("\n⚠️  Are you sure you want to remove this student from your organization? (Y/N): ").upper()
+            if confirm == "Y":
+                cursor.execute("SELECT COUNT(*) FROM member_batch WHERE `Student Number` = ?", (student_id,))
+                org_count = cursor.fetchone()
                 
-                # Get student info before it gets deleted
-                cursor.execute(
-                    "SELECT * FROM member WHERE student_id = ?",
-                    (student_id,)
-                )
-                student = cursor.fetchone()
+                # if member only has 1 org (the one that wants to delete it), remove their data from the member table also
+                if org_count[0] == 1:
+                    cursor.execute("DELETE FROM member WHERE `Student Number` = ?", (student_id,))
+                    conn.commit()
                 
-                if student:
-                    print("\n⚠️  Student Information to be deleted:")
-                    print("┌────────────────────────────────────────────────────────────")
-                    print(f"│ 🎓 ID: {student[0]}")
-                    print(f"│ 👤 Name: {student[1]} {student[2] + ' ' if student[2] else ''}{student[3]}") # If no middle name, it will not print anything.
-                    print(f"│ 👥 Gender: {student[4]}")
-                    print(f"│ 📚 Degree Program: {student[5]}")
-                    print("└────────────────────────────────────────────────────────────")
-                    
-                    confirm = input("\n⚠️  Are you sure you want to remove this student from your organization? (Y/N): ").upper()
-                    if confirm == "Y":
-                        cursor.execute("SELECT COUNT(*) FROM member_batch WHERE `Student Number` = ?")
-                        org_count = cursor.fetchone()
-                        
-                        # if member only has 1 org (the one that wants to delete it), remove their data from the member table also
-                        if org_count == 1:
-                            cursor.execute("DELETE FROM member WHERE `Student Number` = ?", (student_id,))
-                        
-                        cursor.execute("DELETE FROM joins WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
-                        cursor.execute("DELETE FROM member_batch WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
-                        cursor.execute("DELETE FROM student_role WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
-                        cursor.execute("DELETE FROM fee WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
-                        cursor.execute("DELETE FROM payment WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
+                cursor.execute("DELETE FROM joins WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
+                cursor.execute("DELETE FROM member_batch WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
+                cursor.execute("DELETE FROM student_role WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
+                cursor.execute("DELETE FROM fee WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
+                cursor.execute("DELETE FROM payment WHERE `Student Number` = ? AND `Organization ID` = ?", (student_id, organization_id))
 
-                        conn.commit()
+                conn.commit()
 
-                        print("✅ Student successfully deleted from database!")
-                else:
-                    print(f"\n❌ Student with ID {student_id} not found!")
-                    
-            except mariadb.Error as e:
-                print(f"\n❌ Error deleting student: {e}")
-        elif choice == "2":
-            # TODO: code for removing member from committee
-            print("wala pa")
+                print("✅ Student successfully deleted from database!")
+        else:
+            print(f"\n❌ Student with ID {student_id} not found!")
+            
+    except mariadb.Error as e:
+        print(f"\n❌ Error deleting student: {e}")
             
 def view_org_members(conn, organization_id):
     while True:
@@ -298,43 +281,46 @@ def view_org_members(conn, organization_id):
         choice = input("Enter your choice: ")
         if choice == "0":
             break
+        # WORKS
         elif choice == "1":
             try:
                 cursor = conn.cursor()
                 
                 cursor.execute(
-                    """SELECT `Organization ID`,
-                    `Organization Name`,
-                    `Student Number`,
-                    `First Name`,
-                    `Last Name`,
-                    `Gender`,
-                    `Degree Program`,
-                    `Batch`
+                    """SELECT o.`Organization ID`,
+                    o.`Organization Name`,
+                    m.`Student Number`,
+                    m.`First Name`,
+                    m.`Last Name`,
+                    m.`Gender`,
+                    m.`Degree Program`,
+                    mb.`Batch`
                     FROM member_batch mb 
                     JOIN organization o ON mb.`Organization ID` = o.`Organization ID`
                     JOIN member m ON mb.`Student Number` = m.`Student Number`
-                    WHERE `Organization ID` = ?""",
+                    WHERE o.`Organization ID` = ?""",
                     (organization_id,)
                 )
                 results = cursor.fetchall()
 
                 if results:
-                    print("\n📋 Organization Member List")
-                    print("┌────────────┬──────────────────────────────┬──────────────┬────────────┬────────────┬────────────┬────────────────────────────┬───────┐")
-                    print("│ Org ID     │ Organization Name            │ Student #    │ First Name │ Last Name  │ Gender     │ Degree Program             │ Batch │")
-                    print("├────────────┼──────────────────────────────┼──────────────┼────────────┼────────────┼────────────┼────────────────────────────┼───────┤")
-
                     for row in results:
-                        org_id, org_name, student_num, first_name, last_name, gender, degree, batch = row
-                        print(f"│ {org_id:<10} │ {org_name:<28} │ {student_num:<12} │ {first_name:<10} │ {last_name:<10} │ {gender:<10} │ {degree:<26} │ {batch:<5} │")
-
-                    print("└────────────┴──────────────────────────────┴──────────────┴────────────┴────────────┴────────────┴────────────────────────────┴───────┘\n")
+                        print("┌────────────────────────────────────────────────────────────")
+                        print(f"│ 🏢 Organization ID: {row[0]}")
+                        print(f"│ 🏢 Organization Name: {row[1]}")
+                        print(f"│ 💰 Student Number: {row[2]}")
+                        print(f"│ 📅 First Name: {row[3]}")
+                        print(f"│ 📚 Last Name: {row[4]}")
+                        print(f"│ 🔃 Gender: {row[5]}")
+                        print(f"│ 🗓️ Degree Program: {row[6]}")
+                        print(f"│ 🗓️ Batch: {row[7]}")
+                        print("└────────────────────────────────────────────────────────────")
                 else:
                     print("\nℹ️  No members found for this organization.\n")
 
             except mariadb.Error as e:
                 print(f"\n❌ Error fetching members: {e}")
+        # 
         elif choice == "2":
             while True:
                 print("""📋 View Member by Category:
@@ -358,7 +344,7 @@ def view_org_members(conn, organization_id):
                         cursor.execute(
                             """SELECT o.`Organization ID`,
                             o.`Organization Name`,
-                            j.`Role`,
+                            j.`Member Role`,
                             m.`Student Number`,
                             m.`First Name`,
                             m.`Last Name`,
@@ -369,22 +355,25 @@ def view_org_members(conn, organization_id):
                             JOIN organization o ON mb.`Organization ID` = o.`Organization ID`
                             JOIN member m ON mb.`Student Number` = m.`Student Number`
                             JOIN joins j ON j.`Student Number` = m.`Student Number` AND o.`Organization ID`=j.`Organization ID`
-                            WHERE `Organization ID` = ? AND `Member Role` = ?""",
+                            WHERE o.`Organization ID` = ? AND j.`Member Role` = ?""",
                             (organization_id, member_role)
                         )
                         results = cursor.fetchall()
 
                         if results:
-                            print(f"\n📋 Members with role '{member_role}' in Organization {organization_id}")
-                            print("┌──────────────┬────────────────────────────┬────────────┬──────────────┬────────────┬────────────┬───────────────┬────────────┬────────┐")
-                            print("│ Org ID       │ Organization Name          │ Role       │ Student #    │ First Name │ Last Name  │ Gender        │ Degree     │ Batch  │")
-                            print("├──────────────┼────────────────────────────┼────────────┼──────────────┼────────────┼────────────┼───────────────┼────────────┼────────┤")
-
                             for row in results:
-                                org_id, org_name, role, student_no, first_name, last_name, gender, degree, batch = row
-                                print(f"│ {org_id:<12} │ {org_name:<26} │ {role:<10} │ {student_no:<12} │ {first_name:<10} │ {last_name:<10} │ {gender:<15} │ {degree:<12} │ {batch:<6} │")
+                                print("┌────────────────────────────────────────────────────────────")
+                                print(f"│ 🏢 Organization ID: {row[0]}")
+                                print(f"│ 🏢 Organization Name: {row[1]}")
+                                print(f"│ 💰 Member Role: {row[2]}")
+                                print(f"│ 📅 Student Number: {row[3]}")
+                                print(f"│ 📚 First Name: {row[4]}")
+                                print(f"│ 🔃 Last Name: {row[5]}")
+                                print(f"│ 🗓️ Gender: {row[6]}")
+                                print(f"│ 💳 Degree Program: {row[7]}")
+                                print(f"│ 💳 Batch: {row[8]}")
+                                print("└────────────────────────────────────────────────────────────")
 
-                            print("└──────────────┴────────────────────────────┴────────────┴──────────────┴────────────┴────────────┴───────────────┴────────────┴────────┘\n")
                         else:
                             print(f"\nℹ️  No members with role '{member_role}' found in Organization {organization_id}.\n")
 
@@ -399,7 +388,7 @@ def view_org_members(conn, organization_id):
                     cursor.execute(
                             """SELECT o.`Organization ID`,
                             o.`Organization Name`,
-                            j.`Status`,
+                            j.`Member Status`,
                             m.`Student Number`,
                             m.`First Name`,
                             m.`Last Name`,
@@ -410,23 +399,26 @@ def view_org_members(conn, organization_id):
                             JOIN organization o ON mb.`Organization ID` = o.`Organization ID`
                             JOIN member m ON mb.`Student Number` = m.`Student Number`
                             JOIN joins j ON j.`Student Number` = m.`Student Number` AND o.`Organization ID`=j.`Organization ID`
-                            WHERE `Organization ID` = ? AND `Status` = ?""",
+                            WHERE o.`Organization ID` = ? AND j.`Member Status` = ?""",
                             (organization_id, member_status)
                         )
                     
                     results = cursor.fetchall()
 
                     if results:
-                        print(f"\n📋 Members with status '{member_status}' in Organization {organization_id}")
-                        print("┌──────────────┬────────────────────────────┬────────────┬──────────────┬────────────┬────────────┬───────────────┬────────────────────────────┬────────┐")
-                        print("│ Org ID       │ Organization Name          │ Status     │ Student #    │ First Name │ Last Name  │ Gender        │ Degree Program              │ Batch  │")
-                        print("├──────────────┼────────────────────────────┼────────────┼──────────────┼────────────┼────────────┼───────────────┼────────────────────────────┼────────┤")
-
                         for row in results:
-                            org_id, org_name, status, student_no, first_name, last_name, gender, degree, batch = row
-                            print(f"│ {org_id:<12} │ {org_name:<26} │ {status:<10} │ {student_no:<12} │ {first_name:<10} │ {last_name:<10} │ {gender:<15} │ {degree:<26} │ {batch:<6} │")
+                                print("┌────────────────────────────────────────────────────────────")
+                                print(f"│ 🏢 Organization ID: {row[0]}")
+                                print(f"│ 🏢 Organization Name: {row[1]}")
+                                print(f"│ 💰 Member Status: {row[2]}")
+                                print(f"│ 📅 Student Number: {row[3]}")
+                                print(f"│ 📚 First Name: {row[4]}")
+                                print(f"│ 🔃 Last Name: {row[5]}")
+                                print(f"│ 🗓️ Gender: {row[6]}")
+                                print(f"│ 💳 Degree Program: {row[7]}")
+                                print(f"│ 💳 Batch: {row[8]}")
+                                print("└────────────────────────────────────────────────────────────")
 
-                        print("└──────────────┴────────────────────────────┴────────────┴──────────────┴────────────┴────────────┴───────────────┴────────────────────────────┴────────┘\n")
                     else:
                         print(f"\nℹ️  No members with status '{member_status}' found in Organization {organization_id}.\n")
 
@@ -436,34 +428,33 @@ def view_org_members(conn, organization_id):
                     cursor = conn.cursor()
                 
                     cursor.execute(
-                        """SELECT `Organization ID`,
-                        `Organization Name`,
-                        `Student Number`,
-                        `First Name`,
-                        `Last Name`,
-                        `Gender`,
-                        `Degree Program`,
-                        `Batch`
+                        """SELECT o.`Organization ID`,
+                        o.`Organization Name`,
+                        m.`Student Number`,
+                        m.`First Name`,
+                        m.`Last Name`,
+                        m.`Gender`,
+                        m.`Degree Program`
                         FROM member_batch mb 
                         JOIN organization o ON mb.`Organization ID` = o.`Organization ID`
                         JOIN member m ON mb.`Student Number` = m.`Student Number`
-                        WHERE `Organization ID` = ? AND `Member Gender` = ?""",
+                        WHERE o.`Organization ID` = ? AND m.`Gender` = ?""",
                         (organization_id, member_gender)
                     )
 
                     results = cursor.fetchall()
 
                     if results:
-                        print(f"\n📋 Members with role '{member_role}' in Organization {organization_id}")
-                        print("┌──────────────┬────────────────────────────────────┬────────────┬──────────────┬────────────┬────────────┬───────────────┬────────────────────────────┬────────┐")
-                        print("│ Org ID       │ Organization Name                  │ Role       │ Student #    │ First Name │ Last Name  │ Gender        │ Degree Program              │ Batch  │")
-                        print("├──────────────┼────────────────────────────────────┼────────────┼──────────────┼────────────┼────────────┼───────────────┼────────────────────────────┼────────┤")
-
                         for row in results:
-                            org_id, org_name, role, student_no, first_name, last_name, gender, degree, batch = row
-                            print(f"│ {org_id:<12} │ {org_name:<36} │ {role:<10} │ {student_no:<12} │ {first_name:<10} │ {last_name:<10} │ {gender:<15} │ {degree:<26} │ {batch:<6} │")
-
-                        print("└──────────────┴────────────────────────────────────┴────────────┴──────────────┴────────────┴────────────┴───────────────┴────────────────────────────┴────────┘\n")
+                                print("┌────────────────────────────────────────────────────────────")
+                                print(f"│ 🏢 Organization ID: {row[0]}")
+                                print(f"│ 🏢 Organization Name: {row[1]}")
+                                print(f"│ 💰 Student Number: {row[2]}")
+                                print(f"│ 📅 First Name: {row[3]}")
+                                print(f"│ 📚 Last Name: {row[4]}")
+                                print(f"│ 🔃 Gender: {row[5]}")
+                                print(f"│ 🗓️ Degree Program: {row[6]}")
+                                print("└────────────────────────────────────────────────────────────")
 
                     else:
                         print(f"\nℹ️  No members with gender '{member_gender}' found in Organization {organization_id}.\n")
@@ -474,75 +465,153 @@ def view_org_members(conn, organization_id):
                     cursor = conn.cursor()
                 
                     cursor.execute(
-                        """SELECT `Organization ID`,
-                        `Organization Name`,
-                        `Student Number`,
-                        `First Name`,
-                        `Last Name`,
-                        `Gender`,
-                        `Degree Program`,
-                        `Batch`
+                        """SELECT o.`Organization ID`,
+                        o.`Organization Name`,
+                        m.`Student Number`,
+                        m.`First Name`,
+                        m.`Last Name`,
+                        m.`Gender`,
+                        m.`Degree Program`
                         FROM member_batch mb 
                         JOIN organization o ON mb.`Organization ID` = o.`Organization ID`
                         JOIN member m ON mb.`Student Number` = m.`Student Number`
-                        WHERE `Organization ID` = ? AND `Degree Program` = ?""",
+                        WHERE o.`Organization ID` = ? AND m.`Degree Program` = ?""",
                         (organization_id, member_degprog)
                     )
 
                     results = cursor.fetchall()
 
                     if results:
-                        print(f"\n📋 Members with Degree Program '{member_degprog}' in Organization {organization_id}")
-                        print("┌──────────────┬────────────────────────────────────┬────────────┬──────────────┬────────────┬────────────┬───────────────┬────────────────────────────┬────────┐")
-                        print("│ Org ID       │ Organization Name                  │ Role       │ Student #    │ First Name │ Last Name  │ Gender        │ Degree Program              │ Batch  │")
-                        print("├──────────────┼────────────────────────────────────┼────────────┼──────────────┼────────────┼────────────┼───────────────┼────────────────────────────┼────────┤")
-
                         for row in results:
-                            org_id, org_name, role, student_no, first_name, last_name, gender, degree, batch = row
-                            print(f"│ {org_id:<12} │ {org_name:<36} │ {role:<10} │ {student_no:<12} │ {first_name:<10} │ {last_name:<10} │ {gender:<15} │ {degree:<26} │ {batch:<6} │")
-
-                        print("└──────────────┴────────────────────────────────────┴────────────┴──────────────┴────────────┴────────────┴───────────────┴────────────────────────────┴────────┘\n")
+                            print("┌────────────────────────────────────────────────────────────")
+                            print(f"│ 🏢 Organization ID: {row[0]}")
+                            print(f"│ 🏢 Organization Name: {row[1]}")
+                            print(f"│ 💰 Student Number: {row[2]}")
+                            print(f"│ 📅 First Name: {row[3]}")
+                            print(f"│ 📚 Last Name: {row[4]}")
+                            print(f"│ 🔃 Gender: {row[5]}")
+                            print(f"│ 🗓️ Degree Program: {row[6]}")
+                            print("└────────────────────────────────────────────────────────────")
 
                     else:
                         print(f"\nℹ️  No members with Degree Program '{member_degprog}' found in Organization {organization_id}.\n")
 
                 elif choice == "5":
-                    member_batch = input("Enter member batch (YYYY-YYYY): ")
+                    member_batch = input("Enter member batch (YYYY): ")
 
                     cursor = conn.cursor()
                 
                     cursor.execute(
-                        """SELECT `Organization ID`,
-                        `Organization Name`,
-                        `Student Number`,
-                        `First Name`,
-                        `Last Name`,
-                        `Gender`,
-                        `Degree Program`,
-                        `Batch`
+                        """SELECT o.`Organization ID`,
+                        o.`Organization Name`,
+                        m.`Student Number`,
+                        m.`First Name`,
+                        m.`Last Name`,
+                        m.`Gender`,
+                        m.`Degree Program`,
+                        mb.`Batch`
                         FROM member_batch mb 
                         JOIN organization o ON mb.`Organization ID` = o.`Organization ID`
                         JOIN member m ON mb.`Student Number` = m.`Student Number`
-                        WHERE `Organization ID` = ? AND `Batch` = ?""",
+                        WHERE o.`Organization ID` = ? AND mb.`Batch` = ?""",
                         (organization_id, member_batch)
                     )
 
                     results = cursor.fetchall()
 
                     if results:
-                        print(f"\n📋 Members with Degree Program '{member_degprog}' in Organization {organization_id}")
-                        print("┌──────────────┬────────────────────────────────────┬────────────┬──────────────┬────────────┬────────────┬───────────────┬────────────────────────────┬────────┐")
-                        print("│ Org ID       │ Organization Name                  │ Role       │ Student #    │ First Name │ Last Name  │ Gender        │ Degree Program              │ Batch  │")
-                        print("├──────────────┼────────────────────────────────────┼────────────┼──────────────┼────────────┼────────────┼───────────────┼────────────────────────────┼────────┤")
-
                         for row in results:
-                            org_id, org_name, role, student_no, first_name, last_name, gender, degree, batch = row
-                            print(f"│ {org_id:<12} │ {org_name:<36} │ {role:<10} │ {student_no:<12} │ {first_name:<10} │ {last_name:<10} │ {gender:<15} │ {degree:<26} │ {batch:<6} │")
-
-                        print("└──────────────┴────────────────────────────────────┴────────────┴──────────────┴────────────┴────────────┴───────────────┴────────────────────────────┴────────┘\n")
+                            print("┌────────────────────────────────────────────────────────────")
+                            print(f"│ 🏢 Organization ID: {row[0]}")
+                            print(f"│ 🏢 Organization Name: {row[1]}")
+                            print(f"│ 💰 Student Number: {row[2]}")
+                            print(f"│ 📅 First Name: {row[3]}")
+                            print(f"│ 📚 Last Name: {row[4]}")
+                            print(f"│ 🔃 Gender: {row[5]}")
+                            print(f"│ 🗓️ Degree Program: {row[6]}")
+                            print(f"│ 🗓️ Batch: {row[7]}")
+                            print("└────────────────────────────────────────────────────────────")
 
                     else:
                         print(f"\nℹ️  No members with Degree Program '{member_degprog}' found in Organization {organization_id}.\n")
+        elif choice == "3":
+            member_role = input("Enter member role: ")
+            
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""CREATE OR REPLACE VIEW organization_rolevu
+                               (student_number, 
+                               last_name, 
+                               first_name, 
+                               role, 
+                               academic_year)
+                            AS SELECT m.`Student Number`, m.`Last Name`, m.`First Name`, j.`Member Role`, j.`Academic Year`
+                            FROM member m
+                            JOIN joins j ON m.`Student Number` = j.`Student Number`
+                            WHERE j.`Member Role` = ?
+                                AND j.`Organization ID` = ?
+                            ORDER BY STR_TO_DATE(CONCAT(SUBSTRING_INDEX(j.`Academic Year`, '-', 1), '-01-01'), '%Y-%m-%d') DESC""",
+                            (member_role, organization_id))
+                cursor.execute("SELECT * FROM organization_rolevu")
+                results = cursor.fetchall()
+                if results:
+                    for row in results:
+                        print("┌────────────────────────────────────────────────────────────")
+                        print(f"│ 🏢 Student Number: {row[0]}")
+                        print(f"│ 🏢 Last Name: {row[1]}")
+                        print(f"│ 💰 First Name: {row[2]}")
+                        print(f"│ 📅 Role: {row[3]}")
+                        print(f"│ 📚 Academic Year: {row[4]}")
+                        print("└────────────────────────────────────────────────────────────")
+                else:
+                    print("\n❌ No members with that role found.\n")
+            except mariadb.Error as e:
+                print(f"\n❌ Error fetching data: {e}")
+        elif choice == "5":
+            try:
+                cursor = conn.cursor()
+                cursor.execute("""CREATE OR REPLACE VIEW alumnivu(student_number, first_name, last_name, organization_id, status) 
+                    AS SELECT m.`Student Number`, m.`First Name`, m.`Last Name`, j.`Organization ID`, j.`Member Status`
+                    FROM member m
+                    JOIN joins j ON m.`Student Number` = j.`Student Number`
+                    WHERE (j.`Student Number`, j.`Organization ID`, 
+                        STR_TO_DATE(CONCAT(SUBSTRING_INDEX(j.`Academic Year`, '-', 1), 
+                                            CASE j.`Semester` 
+                                                WHEN '1st' THEN '-01-01' 
+                                                WHEN '2nd' THEN '-08-01' 
+                                                ELSE '-01-01' 
+                                            END), '%Y-%m-%d')
+                        ) IN (
+                        SELECT 
+                            j2.`Student Number`, 
+                            j2.`Organization ID`,
+                            MAX(STR_TO_DATE(CONCAT(SUBSTRING_INDEX(j2.`Academic Year`, '-', 1), 
+                                                CASE j2.`Semester` 
+                                                    WHEN '1st' THEN '-01-01' 
+                                                    WHEN '2nd' THEN '-08-01' 
+                                                    ELSE '-01-01' 
+                                                END), '%Y-%m-%d'))
+                        FROM joins j2
+                        GROUP BY j2.`Student Number`, j2.`Organization ID`
+                    )
+                    AND j.`Member Status` = 'Alumni'
+                    AND j.`Organization ID` = ?""",
+                            (organization_id,))
+                cursor.execute("SELECT * FROM alumnivu")
+                results = cursor.fetchall()
+                if results:
+                    for row in results:
+                        print("┌────────────────────────────────────────────────────────────")
+                        print(f"│ 🏢 Student Number: {row[0]}")
+                        print(f"│ 🏢 Last Name: {row[1]}")
+                        print(f"│ 💰 First Name: {row[2]}")
+                        print(f"│ 📅 Role: {row[3]}")
+                        print(f"│ 📚 Academic Year: {row[4]}")
+                        print("└────────────────────────────────────────────────────────────")
+                else:
+                    print("\n❌ No alumni members found.\n")
+            except mariadb.Error as e:
+                print(f"\n❌ Error fetching data: {e}")
 
 def main(conn, organization_id):
     while True:
